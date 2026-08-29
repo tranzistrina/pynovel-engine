@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.25.0
+
+- Connected animation timelines to the runtime.
+- Added runtime `TimelinePlayer` for single or multiple timelines.
+- Added `.vn` commands `play_animation`, `animation` and `stop_animation`.
+- Applied timeline keyframes to runtime character properties: `x`, `y`, `scale` and `opacity`.
+- Added support for compact single-timeline `animation.json` files.
+- Added runtime animation regression tests.
+- Updated demo script to run the `AliceEnter` timeline.
+- Updated the main bilingual README for 0.25.0.
+
 ## 0.24.0
 
 - Added multi-track animation timeline model.

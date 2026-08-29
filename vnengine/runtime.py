@@ -105,7 +105,7 @@ class Game:
                             else:self.runtime.advance()
             if not self.at_title:
                 s=self.runtime.state; dt=max(0.0,clock.get_time()/1000.0); self.runtime.update(dt); s.settings["text_speed"]=float(self.menu.settings.get("text_speed",42)); s.settings["volume"]=float(self.menu.settings.get("volume",0.8))
-                if self.ui:self.ui.update(pygame.mouse.get_pos(),self.screen)
+                if self.ui:self.ui.update(pygame.mouse.get_pos(),self.screen,s)
                 if s.dialogue:s.text_progress=min(len(s.dialogue[1]),s.text_progress+s.settings["text_speed"]/60.0)
                 if s.auto_mode and s.dialogue and s.text_progress>=len(s.dialogue[1]) and not self.menu.is_open:self.runtime.advance()
                 if s.skip_mode and not s.choice_options and not s.dialogue and not self.menu.is_open:self.runtime.advance()

@@ -17,7 +17,7 @@ from vnengine.map.movement import MovementController
 class ExtensibleRuntime(CoreRuntime):
     """Core Runtime with opt-in project extension primitives."""
 
-    ENGINE_VERSION = "0.35.0"
+    ENGINE_VERSION = "0.37.0"
 
     def __init__(self, story, asset_root):
         super().__init__(story, asset_root)
@@ -56,7 +56,7 @@ class ExtensibleRuntime(CoreRuntime):
         for system in self.systems.values(): system.update(dt, self.game_state)
         self.scene_stack.update(dt)
         if self.movement is not None: self.movement.update(dt)
-        self.scheduler.advance(max(0, int(dt * self.scheduler.tick_rate)), lambda item: self.emit(item.event, item.data))
+        self.scheduler.advance_seconds(max(0.0, float(dt)), lambda item: self.emit(item.event, item.data))
 
     def dispatch_input(self, event: object) -> bool:
         if self.scene_stack.handle_input(event): return True

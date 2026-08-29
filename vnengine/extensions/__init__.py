@@ -2,6 +2,7 @@
 
 from .commands import CommandContext, CommandRegistry
 from .events import Event, EventBus, EventSubscription
+from .scheduler import GameScheduler, ScheduledEvent
 from .scenes import Scene, SceneEntry, SceneStack
 from .state import StateNamespace, StateRegistry
 from .system import GameSystem, SystemEvent, SystemRegistry
@@ -9,6 +10,7 @@ from .system import GameSystem, SystemEvent, SystemRegistry
 __all__ = [
     "CommandContext", "CommandRegistry",
     "Event", "EventBus", "EventSubscription",
+    "GameScheduler", "ScheduledEvent",
     "Scene", "SceneEntry", "SceneStack",
     "StateNamespace", "StateRegistry",
     "GameSystem", "SystemEvent", "SystemRegistry",

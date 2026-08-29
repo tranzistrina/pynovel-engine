@@ -2,7 +2,7 @@
 
 Python-first visual novel engine targeting Windows, macOS and Linux.
 
-## 0.6 capabilities
+## 0.7 capabilities
 
 - readable `.vn` scripting language
 - scene/title commands, backgrounds and characters
@@ -13,7 +13,11 @@ Python-first visual novel engine targeting Windows, macOS and Linux.
 - music, sounds, waits and transitions
 - character expressions plus `expression`, `move`, and `scale` commands
 - eased character position and scale tweening
-- save/load state with background, characters, expressions and history
+- save/load state with background, characters and history
+- in-game menu with Resume, Save, Load, History and Settings
+- five save slots
+- persistent text speed and volume settings
+- mouse and keyboard menu navigation
 - Auto and Skip modes
 - resizable window and F11 fullscreen
 - pygame-ce runtime
@@ -22,7 +26,7 @@ Python-first visual novel engine targeting Windows, macOS and Linux.
 - visual Dialogue graph editor with nodes and links
 - dialogue graph JSON saved independently from the compiled script
 - graph-to-`.vn` compiler with validation of missing targets
-- pytest coverage for parser, expressions, scene data, dialogue graphs and animation tweening
+- pytest coverage for parser, expressions, scene data, dialogue graphs and menu logic
 - PyInstaller build helper and GitHub Actions matrix
 
 ## Install
@@ -47,6 +51,17 @@ pynovel-editor examples/demo
 ```
 
 The editor has Script, Scene and Dialogue tabs. In Scene, place characters visually. In Dialogue, build the branching story graph, edit node properties, move nodes, save `dialogue.json`, then compile the graph to `game.vn`.
+
+## Runtime controls
+
+- `Enter` / `Space`: continue
+- `1-9`: choose option
+- `Esc`: open menu
+- `F5`: quick save slot 1
+- `F9`: quick load slot 1
+- `F7`: toggle skip
+- `F8`: toggle auto
+- `F11`: fullscreen
 
 ## Animation script example
 

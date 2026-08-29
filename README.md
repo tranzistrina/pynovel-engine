@@ -27,7 +27,9 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - title screen
 - Russian and English localization through JSON catalogs
 - configurable UI theme through `theme.json`
-- reusable runtime UI primitives
+- declarative runtime UI widgets: Panel, Label, Image, TextBox and Button
+- percentage sizing, anchors and z-order for UI layouts
+- JSON UI documents for project-defined interfaces
 - resizable window and fullscreen
 - pygame-ce runtime
 - PySide6 desktop editor
@@ -70,6 +72,33 @@ The editor contains Script, Scene and Dialogue workflows. Scene editing handles 
 - `F7`: toggle skip mode
 - `F8`: toggle auto mode
 - `F11`: toggle fullscreen
+
+### UI layout
+
+Project UI can be described as JSON and loaded with `UIDocument`.
+
+```json
+{
+  "type": "panel",
+  "id": "hud",
+  "width": "100%",
+  "height": "100%",
+  "children": [
+    {
+      "type": "button",
+      "id": "start",
+      "x": "50%",
+      "y": "50%",
+      "width": 240,
+      "height": 56,
+      "anchor": "center",
+      "text": "Start"
+    }
+  ]
+}
+```
+
+Supported widgets: `panel`, `label`, `image`, `textbox`, `button`. Widgets support nesting, anchors, percentage dimensions, visibility and `z` ordering.
 
 ### UI theme
 
@@ -147,7 +176,9 @@ PyNovel Engine это движок и редактор визуальных но
 - стартовый экран
 - локализация интерфейса через JSON-каталоги на русском и английском
 - настраиваемая тема интерфейса через `theme.json`
-- переиспользуемые UI-компоненты runtime
+- декларативные UI-компоненты runtime: Panel, Label, Image, TextBox и Button
+- процентные размеры, anchors и z-порядок UI-компонентов
+- JSON-документы для интерфейсов проекта
 - изменение размера окна и полноэкранный режим
 - runtime на pygame-ce
 - редактор на PySide6
@@ -190,6 +221,33 @@ pynovel-editor examples/demo
 - `F7`: пропуск текста
 - `F8`: автоматический режим
 - `F11`: полноэкранный режим
+
+### UI-интерфейс
+
+Интерфейс проекта можно описывать через JSON и загружать с помощью `UIDocument`.
+
+```json
+{
+  "type": "panel",
+  "id": "hud",
+  "width": "100%",
+  "height": "100%",
+  "children": [
+    {
+      "type": "button",
+      "id": "start",
+      "x": "50%",
+      "y": "50%",
+      "width": 240,
+      "height": 56,
+      "anchor": "center",
+      "text": "Начать"
+    }
+  ]
+}
+```
+
+Поддерживаются `panel`, `label`, `image`, `textbox`, `button`. Компоненты можно вкладывать друг в друга; доступны anchors, процентные размеры, видимость и порядок `z`.
 
 ### Тема интерфейса
 
@@ -252,4 +310,4 @@ python tools/build.py examples/demo --name MyNovel
 
 ### Статус проекта
 
-Проект находится в активной разработке. Архитектура разделена на editor, scripting, runtime, rendering, UI и project data, поэтому следующие функции можно добавлять без переписывания всего движка.
+Проект находится в активной разработке. Архитектура разделена на editor, scripting, runtime, rendering, UI и project data, поэтому новые функции добавляются отдельными слоями без переписывания всего движка.

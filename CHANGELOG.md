@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.23.0
+
+- Added a shared asset drag-and-drop MIME payload format.
+- Made Asset Browser entries draggable.
+- Added Scene Editor drops that create image-backed character objects at the drop point.
+- Added UI Editor drops that create image widgets at the drop point.
+- Added automatic unique names/IDs for dropped assets.
+- Added asset drag-and-drop regression tests.
+- Updated editor version and bilingual README.
+
 ## 0.22.0
 
 - Added the Asset Browser to the main PyNovel Editor.

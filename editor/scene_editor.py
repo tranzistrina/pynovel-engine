@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox, QFormLayout, QGroupBox, QGraphicsView, QGraphicsScene,
     QGraphicsPixmapItem,
 )
+from vnengine.assets.dragdrop import MIME_TYPE, decode_asset_path
 
 
 @dataclass
@@ -25,12 +26,15 @@ class SceneObject:
 
 class SceneCanvas(QGraphicsView):
     object_moved = Signal(str, float, float)
+    asset_dropped = Signal(str, float, float)
 
     def __init__(self, project: Path):
         super().__init__()
         self.project = project
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
+        self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
         self.setMinimumSize(600, 400)
         self._items: dict[str, QGraphicsPixmapItem] = {}
 
@@ -66,6 +70,25 @@ class SceneCanvas(QGraphicsView):
         self.setSceneRect(0, 0, width, height)
         self.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
 
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat(MIME_TYPE):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        raw = bytes(event.mimeData().data(MIME_TYPE)).decode("utf-8")
+        path = decode_asset_path(raw)
+        if path:
+            point = self.mapToScene(event.position().toPoint())
+            rect = self.scene.sceneRect()
+            x = max(0.0, min(100.0, point.x() / max(1.0, rect.width()) * 100.0))
+            y = max(0.0, min(100.0, point.y() / max(1.0, rect.height()) * 100.0))
+            self.asset_dropped.emit(path, round(x, 2), round(y, 2))
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         item = self.scene.itemAt(self.mapToScene(event.position().toPoint()), self.transform())
@@ -88,7 +111,7 @@ class SceneEditor(QWidget):
         root = QVBoxLayout(self); top = QHBoxLayout(); root.addLayout(top)
         self.scene_name = QLabel("Scene"); self.save_btn = QPushButton("Save scene"); self.reset_btn = QPushButton("Reload")
         top.addWidget(self.scene_name); top.addStretch(); top.addWidget(self.reset_btn); top.addWidget(self.save_btn)
-        body = QHBoxLayout(); root.addLayout(body, 1); self.canvas = SceneCanvas(self.project); self.canvas.object_moved.connect(self.on_moved); body.addWidget(self.canvas, 4)
+        body = QHBoxLayout(); root.addLayout(body, 1); self.canvas = SceneCanvas(self.project); self.canvas.object_moved.connect(self.on_moved); self.canvas.asset_dropped.connect(self.on_asset_dropped); body.addWidget(self.canvas, 4)
         side = QVBoxLayout(); body.addLayout(side, 1)
         group = QGroupBox("Characters"); gl = QVBoxLayout(group); self.list = QListWidget(); self.list.currentItemChanged.connect(self.select_character); gl.addWidget(self.list); side.addWidget(group)
         inspector = QGroupBox("Inspector"); form = QFormLayout(inspector)
@@ -127,5 +150,23 @@ class SceneEditor(QWidget):
             if obj.get("name") == name: obj["x"], obj["y"] = round(x, 2), round(y, 2); break
         self.scene_changed.emit(self.data); self.select_character(self.list.currentItem(), None)
 
+    def on_asset_dropped(self, path: str, x: float, y: float):
+        image_suffixes = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
+        if Path(path).suffix.lower() not in image_suffixes:
+            return
+        stem = Path(path).stem or "Character"
+        used = {str(obj.get("name", "")) for obj in self.data.get("characters", [])}
+        name = stem
+        index = 2
+        while name in used:
+            name = f"{stem}_{index}"
+            index += 1
+        obj = {"name": name, "image": path.replace("\\", "/"), "x": x, "y": y, "scale": 1.0, "visible": True}
+        self.data.setdefault("characters", []).append(obj)
+        self.list.addItem(name)
+        self.list.setCurrentRow(self.list.count() - 1)
+        self.canvas.load(self.data); self.scene_changed.emit(self.data)
+
     def save_file(self):
+        self.scene_path.parent.mkdir(parents=True, exist_ok=True)
         self.scene_path.write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding="utf-8"); self.scene_changed.emit(self.data)

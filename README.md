@@ -2,25 +2,25 @@
 
 Python-first visual novel engine targeting Windows, macOS and Linux.
 
-## 0.2 MVP capabilities
+## 0.3 capabilities
 
 - readable `.vn` scripting language
-- scenes, backgrounds and characters
-- dialogue and narration
-- choices, labels and jumps
-- variables and safe expression evaluation
+- scene/title commands, backgrounds and characters
+- dialogue and narration with typewriter effect
+- clickable and keyboard choices
+- labels and jumps
+- variables with `=`, `+=`, `-=`, `*=`, `/=`
+- safe expression evaluation
 - `if / else / endif`
-- music and sound hooks
-- wait and transition actions
-- save/load state
-- dialogue history in saves
-- auto and skip modes
-- keyboard and mouse input
+- music, sounds, waits and transitions
+- save/load state with background, characters and history
+- Auto and Skip modes
+- mouse and keyboard input
+- resizable window and F11 fullscreen
 - pygame-ce runtime
-- PySide6 desktop editor shell
-- script validation
-- pytest tests
-- PyInstaller build helper and CI matrix
+- PySide6 desktop editor with project tree, text editing, asset preview, validation and run buttons
+- pytest coverage for parser and expressions
+- PyInstaller build helper and GitHub Actions matrix
 
 ## Install
 
@@ -29,7 +29,7 @@ python -m pip install -e .
 pytest
 ```
 
-## Run the demo
+## Run demo
 
 ```bash
 python -m vnengine run examples/demo
@@ -37,35 +37,38 @@ python -m vnengine run examples/demo
 pynovel run examples/demo
 ```
 
-## Editor
+## Open editor
 
 ```bash
 pynovel-editor examples/demo
 ```
 
-## `.vn` example
+## Script example
 
 ```text
-label start
+title "My First Novel"
 background "assets/room.png"
 character Alice "assets/alice.png" center
 say Alice "Hello."
 set affection = 2
-if affection >= 2
+set affection += 3
+if affection >= 5
 say Narrator "Unlocked branch!"
+else
+say Narrator "Keep playing."
 endif
 choice
 "Continue": next
 "End": ending
 ```
 
-## Packaging
+## Build standalone application
 
-Build on the target OS with PyInstaller:
+Install PyInstaller and build on the target OS:
 
 ```bash
 python -m pip install pyinstaller
 python tools/build.py examples/demo --name MyNovel
 ```
 
-Builds are platform-native because Python/SDL application bundles should be produced on Windows, macOS and Linux separately.
+The CI workflow builds Windows, macOS and Linux artifacts separately because native desktop bundles should be produced on their target operating systems.

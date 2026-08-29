@@ -21,14 +21,11 @@ def test_widget_tree_and_percent_anchor():
     assert button.rect(screen).center == (640, 360)
 
 
-def test_ui_document_click(tmp_path: Path):
+def test_ui_document_click_returns_action(tmp_path: Path):
     path = tmp_path / 'ui.json'
-    path.write_text('{"type":"button","id":"b","x":0,"y":0,"width":100,"height":50,"text":"Go"}', encoding='utf-8')
+    path.write_text('{"type":"button","id":"b","action":"open_menu","x":0,"y":0,"width":100,"height":50,"text":"Go"}', encoding='utf-8')
     pygame.init()
     doc = UIDocument.load(path)
     screen = pygame.Surface((200, 100))
-    fired = []
-    doc.root.on_click = lambda: fired.append(True)
-    assert doc.click((20, 20), screen)
-    assert fired == [True]
+    assert doc.click((20, 20), screen) == 'open_menu'
     pygame.quit()

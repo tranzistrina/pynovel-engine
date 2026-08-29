@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.0
+
+- Added a reusable rectangle-selection geometry helper for editor tooling.
+- Added normalized box-selection rectangles and intersection tests.
+- Added regression tests for rectangle selection behavior.
+- Added the `vnengine.editor` package namespace for editor-side reusable models.
+
 ## 0.17.0
 
 - Connected the shared multi-selection model to the visual UI Editor.

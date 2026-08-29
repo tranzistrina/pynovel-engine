@@ -42,7 +42,13 @@ class Runtime:
         data = json.loads(manifest.read_text(encoding="utf-8"))
         if data.get("background"): self._background(Action("background", {"path": data["background"]}))
         for raw in data.get("characters", []):
-            self._character(Action("character", {"name": raw.get("name", "Character"), "image": raw.get("image", ""), "position": raw.get("position", "center"), "expression": raw.get("expression", "neutral"), "x": raw.get("x"), "y": raw.get("y", 100.0), "scale": raw.get("scale", 1.0), "action": "show" if raw.get("visible", True) else "hide"}))
+            self._character(Action("character", {
+                "name": raw.get("name", "Character"), "image": raw.get("image", ""),
+                "position": raw.get("position", "center"), "expression": raw.get("expression", "neutral"),
+                "x": raw.get("x"), "y": raw.get("y", 100.0), "scale": raw.get("scale", 1.0),
+                "rotation": raw.get("rotation", 0.0),
+                "action": "show" if raw.get("visible", True) else "hide"
+            }))
     def load_image(self, rel):
         if rel not in self._image_cache: self._image_cache[rel] = pygame.image.load(self.asset(rel)).convert_alpha()
         return self._image_cache[rel]
@@ -56,7 +62,7 @@ class Runtime:
             self.state.characters.pop(name, None); self.state.character_surfaces.pop(name, None); self.state.animations.pop(name, None); return
         position = a.data.get("position", "center"); x = a.data.get("x")
         if x is None: x = POSITIONS.get(position, 50.0)
-        char = Character(name, a.data["image"], position, True, float(x), float(a.data.get("y", 100.0)), float(a.data.get("scale", 1.0)), 1.0, a.data.get("expression", "neutral"))
+        char = Character(name, a.data["image"], position, True, float(x), float(a.data.get("y", 100.0)), float(a.data.get("scale", 1.0)), 1.0, a.data.get("expression", "neutral"), float(a.data.get("rotation", 0.0)))
         self.state.characters[name] = char
         try: self.state.character_surfaces[name] = self.load_image(char.image)
         except (FileNotFoundError, pygame.error): self.state.character_surfaces.pop(name, None)
@@ -79,7 +85,7 @@ class Runtime:
         for _name, values in updates.items():
             for (target, prop), value in values.items():
                 char = self.state.characters.get(target)
-                if char and prop in {"x", "y", "scale", "opacity"}: setattr(char, prop, float(value))
+                if char and prop in {"x", "y", "scale", "opacity", "rotation"}: setattr(char, prop, float(value))
     def update(self, dt):
         finished=[]
         for name,props in list(self.state.animations.items()):
@@ -135,13 +141,13 @@ class Runtime:
     def new_game(self):
         story=self.state.story; self.state=GameState(story); self.state.timeline_player=TimelinePlayer(self.asset_root); self._image_cache.clear(); self._sound_cache.clear(); self.apply_scene_manifest(); self.advance()
     def save(self,path):
-        write_save(path,SaveState(self.state.index,self.state.variables,self.state.history,self.state.background_path,{k:{"image":v.image,"position":v.position,"visible":v.visible,"x":v.x,"y":v.y,"scale":v.scale,"opacity":v.opacity,"expression":v.expression} for k,v in self.state.characters.items()}))
+        write_save(path,SaveState(self.state.index,self.state.variables,self.state.history,self.state.background_path,{k:{"image":v.image,"position":v.position,"visible":v.visible,"x":v.x,"y":v.y,"scale":v.scale,"opacity":v.opacity,"expression":v.expression,"rotation":v.rotation} for k,v in self.state.characters.items()}))
     def load(self,path):
         data=read_save(path); s=self.state; s.index=data.action_index; s.variables=data.variables; s.history=data.history; s.background_path=data.background; s.dialogue=None; s.choice_options=[]; s.paused_for_input=False; s.conditional_stack.clear(); s.animations.clear()
         if data.background:
             try:s.background=self.load_image(data.background)
             except (FileNotFoundError,pygame.error):s.background=None
-        s.characters={k:Character(k,v["image"],v.get("position","center"),v.get("visible",True),v.get("x",POSITIONS.get(v.get("position","center"),50.0)),v.get("y",100.0),v.get("scale",1.0),v.get("opacity",1.0),v.get("expression","neutral")) for k,v in data.characters.items()}; s.character_surfaces={}
+        s.characters={k:Character(k,v["image"],v.get("position","center"),v.get("visible",True),v.get("x",POSITIONS.get(v.get("position","center"),50.0)),v.get("y",100.0),v.get("scale",1.0),v.get("opacity",1.0),v.get("expression","neutral"),v.get("rotation",0.0)) for k,v in data.characters.items()}; s.character_surfaces={}
         for k,c in s.characters.items():
             try:s.character_surfaces[k]=self.load_image(c.image)
             except (FileNotFoundError,pygame.error):pass

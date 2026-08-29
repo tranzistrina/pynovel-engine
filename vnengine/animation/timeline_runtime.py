@@ -8,7 +8,7 @@ from vnengine.animation.timeline import Timeline
 
 
 class TimelinePlayer:
-    """Runtime player for serialized animation timelines."""
+    """Runtime player for one or many serialized animation timelines."""
 
     def __init__(self, project: str | Path):
         self.project = Path(project)
@@ -24,21 +24,28 @@ class TimelinePlayer:
             self.timelines = {}
             return
         data = json.loads(source.read_text(encoding="utf-8"))
-        raw = data.get("timelines", data if isinstance(data, dict) else {})
-        self.timelines = {str(name): Timeline.from_dict(payload) for name, payload in raw.items()}
+        if isinstance(data, dict) and "timelines" in data:
+            raw = data["timelines"]
+            self.timelines = {str(name): Timeline.from_dict(payload) for name, payload in raw.items()}
+            return
+        if isinstance(data, dict) and "tracks" in data:
+            timeline = Timeline.from_dict(data)
+            name = timeline.name or source.stem
+            self.timelines = {name: timeline}
+            return
+        self.timelines = {}
 
     def play(self, name: str) -> bool:
         timeline = self.timelines.get(name)
         if timeline is None:
             return False
-        duration = timeline.duration
-        self.playing[name] = {"time": 0.0, "duration": duration, "loop": timeline.loop}
+        self.playing[name] = {"time": 0.0, "duration": timeline.duration, "loop": timeline.loop}
         return True
 
     def stop(self, name: str) -> None:
         self.playing.pop(name, None)
 
-    def seek(self, name: str, time: float) -> dict[str, float]:
+    def seek(self, name: str, time: float) -> dict[tuple[str, str], float]:
         timeline = self.timelines.get(name)
         if timeline is None:
             return {}
@@ -46,8 +53,8 @@ class TimelinePlayer:
         state["time"] = max(0.0, min(float(time), timeline.duration))
         return timeline.sample(state["time"])
 
-    def update(self, dt: float) -> dict[str, dict[str, float]]:
-        updates: dict[str, dict[str, float]] = {}
+    def update(self, dt: float) -> dict[str, dict[tuple[str, str], float]]:
+        updates: dict[str, dict[tuple[str, str], float]] = {}
         for name, state in list(self.playing.items()):
             timeline = self.timelines.get(name)
             if timeline is None:

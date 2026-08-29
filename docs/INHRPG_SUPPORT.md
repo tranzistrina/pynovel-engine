@@ -1,5 +1,13 @@
 # inhRPG Engine Support Requirements
 
+> **Status snapshot: PyNovel Engine 0.29.0**
+>
+> This document is the compatibility roadmap for building `inhRPG` as a separate project on top of PyNovel Engine. A checked item means the engine currently has a reusable primitive for that requirement. It does **not** mean the whole `inhRPG` feature is implemented.
+>
+> **Implemented reusable primitives:** GameSystem registry, event bus, namespaced state registry, scene stack, logical input map, versioned save envelope, 2D map definition/camera, deterministic weighted pathfinding, map selection model, animation timeline/runtime, declarative UI, asset pipeline, and editor support for Scene/UI/Animation/Assets.
+>
+> **Still required before the full campaign:** generic script extension commands, complete runtime integration of the new extension state/save/input APIs, dynamic UI bindings, full map surface renderer, deterministic scheduler, richer save metadata, notification/log model, audio channels, mini-game scene API, headless integration harness, debug overlay/state inspector, and the remaining P1/P2 tooling listed below.
+
 ## Purpose
 
 `inhRPG` is a game built on top of PyNovel Engine. The game remains a separate repository and must depend on the engine through public APIs only.
@@ -20,6 +28,8 @@ Do not add `inhRPG` rules to the generic engine runtime as one-off special cases
 ## P0 — Runtime extension API
 
 ### 1. Custom game systems
+
+**Status: 🟢 primitive implemented.**
 
 Add a first-class extension interface for game-specific systems:
 
@@ -45,6 +55,8 @@ Required hooks:
 
 ### 2. Namespaced game state
 
+**Status: 🟢 registry primitive implemented.**
+
 Add a serializable state registry so projects can own structured state without stuffing dictionaries into `Runtime.state.variables`.
 
 Requirements:
@@ -56,6 +68,8 @@ Requirements:
 - versioned migrations for save compatibility.
 
 ### 3. Events / commands API
+
+**Status: 🟢 event bus primitive implemented; generic script command family still pending.**
 
 Add a generic event bus or command dispatcher usable by both `.vn` scripts and Python systems.
 
@@ -74,6 +88,8 @@ The event system must support listeners with explicit ordering and safe removal.
 
 ### 4. Script extension commands
 
+**Status: 🟡 pending.**
+
 Extend the `.vn` parser and runtime with generic project commands, without hardcoding `inhRPG` names.
 
 Required command family:
@@ -90,6 +106,8 @@ Preferred alternative: a registration API that lets external projects register c
 
 ### 5. Non-linear scene stack / overlays
 
+**Status: 🟢 reusable scene stack primitive implemented; runtime loop integration remains.**
+
 The current runtime is effectively one VN scene with optional UI. Add a scene stack so a strategy map, battle result screen, inventory/modal, and mini-game can temporarily cover the VN scene and return to it without destroying context.
 
 Required scene lifecycle:
@@ -104,6 +122,8 @@ Required scene lifecycle:
 ## P0 — Strategy presentation
 
 ### 6. 2D map surface
+
+**Status: 🟡 data/camera primitives implemented; interactive renderer still pending.**
 
 Add a reusable map widget/surface independent from `inhRPG` data.
 
@@ -127,6 +147,8 @@ The engine should not know what a "province" or "army" is. It should render proj
 
 ### 7. Map coordinate model
 
+**Status: 🟢 implemented.**
+
 Provide a stable coordinate abstraction:
 
 - logical map coordinates;
@@ -136,6 +158,8 @@ Provide a stable coordinate abstraction:
 - viewport conversion.
 
 ### 8. Data-driven map definitions
+
+**Status: 🟢 implemented as generic `MapDefinition` model.**
 
 Add a generic `map.json` or similar project asset format containing:
 
@@ -152,6 +176,8 @@ Keep simulation state separate from static map definition data.
 
 ### 9. Save schema versioning
 
+**Status: 🟢 versioned envelope primitive implemented; full Runtime integration pending.**
+
 The current save model stores action index, variables, history, background and characters. `inhRPG` requires much more state.
 
 Add:
@@ -167,6 +193,8 @@ Add:
 
 ### 10. Save metadata
 
+**Status: 🟡 pending.**
+
 Support display metadata for save slots:
 
 - chapter/act;
@@ -179,6 +207,8 @@ Support display metadata for save slots:
 ## P0 — Input and UI
 
 ### 11. Abstract input actions
+
+**Status: 🟢 serializable logical `InputMap` primitive implemented; Runtime migration pending.**
 
 The current runtime is hardcoded to keyboard/mouse behavior. Add an action map:
 
@@ -200,6 +230,8 @@ Allow keyboard and mouse bindings, with future gamepad support.
 
 ### 12. Runtime UI API
 
+**Status: 🟡 declarative widget layer implemented; strategy widgets still pending.**
+
 Keep the existing declarative widgets, but expose:
 
 - dynamic text bindings;
@@ -220,6 +252,8 @@ A strategy game cannot be built comfortably from static `Label` and `Button` obj
 
 ### 13. Data binding
 
+**Status: 🟡 pending.**
+
 Add generic one-way UI bindings from state paths to widget properties, for example:
 
 ```text
@@ -235,6 +269,8 @@ Bindings should be explicit and safe.
 
 ### 14. Time scheduler
 
+**Status: 🟡 pending.**
+
 Add a deterministic game clock independent of wall-clock time.
 
 Requirements:
@@ -249,6 +285,8 @@ Requirements:
 
 ### 15. Turn/day advancement API
 
+**Status: 🟡 pending; depends on scheduler.**
+
 Expose a simple simulation loop:
 
 ```python
@@ -258,6 +296,8 @@ campaign.advance_day()
 The engine provides the scheduler; `inhRPG` owns the actual campaign rules.
 
 ### 16. Pathfinding service
+
+**Status: 🟢 deterministic weighted graph pathfinding implemented.**
 
 Generic 2D graph pathfinding for map nodes.
 
@@ -273,9 +313,13 @@ Required:
 
 ### 17. Selection framework
 
+**Status: 🟢 reusable map selection primitive implemented.**
+
 Provide single and multi-selection support for map entities, including hover, selected, focus, and disabled states.
 
 ### 18. Notification/log system
+
+**Status: 🟡 pending.**
 
 Reusable presentation model for event notifications:
 
@@ -291,7 +335,9 @@ Reusable presentation model for event notifications:
 
 ### 19. Character visual states
 
-Current character model supports image/expression/position/scale/opacity/rotation but not structured visual state beyond an image path.
+**Status: 🟡 partial.**
+
+Current character model supports image/expression/position/scale/opacity/rotation and timeline animation, but structured multi-sprite state is still pending.
 
 Add optional:
 
@@ -305,6 +351,8 @@ Add optional:
 
 ### 20. Transition API
 
+**Status: 🟡 partial.**
+
 Current transition implementation is only a timed dark overlay. Add generic transition types and a clean transition interface:
 
 - fade;
@@ -315,11 +363,15 @@ Current transition implementation is only a timed dark overlay. Add generic tran
 
 ### 21. Audio channels
 
+**Status: 🟡 pending.**
+
 Support named channels for music, ambience, effects, UI and voice instead of one music stream plus generic sounds.
 
 ## P1 — Mini-game framework
 
 ### 22. Generic mini-game scene API
+
+**Status: 🟡 pending.**
 
 Add a reusable base class:
 
@@ -336,6 +388,8 @@ The engine must support arbitrary mini-games without knowing their rules.
 
 ### 23. Mini-game result contract
 
+**Status: 🟡 pending with mini-game API.**
+
 Results must be serializable and return explicit fields such as:
 
 - success/failure;
@@ -347,6 +401,8 @@ Results must be serializable and return explicit fields such as:
 ## P1 — Debugging and tooling
 
 ### 24. Runtime debug overlay
+
+**Status: 🟡 pending.**
 
 Optional developer overlay showing:
 
@@ -361,19 +417,27 @@ Optional developer overlay showing:
 
 ### 25. Event trace
 
+**Status: 🟡 pending.**
+
 Record a configurable event/action trace for debugging narrative-to-strategy interactions.
 
 ### 26. State inspector
 
+**Status: 🟡 pending.**
+
 Developer-only inspector for structured project state.
 
 ### 27. Save-state test fixtures
+
+**Status: 🟡 pending.**
 
 Tools to generate deterministic test saves for regression testing.
 
 ## P2 — Editor support
 
 ### 28. Strategy Map Editor
+
+**Status: 🟡 pending.**
 
 New editor surface for:
 
@@ -386,19 +450,27 @@ New editor surface for:
 
 ### 29. Event editor
 
+**Status: 🟡 pending.**
+
 Visual authoring of campaign events with conditions, effects, choices and follow-up actions.
 
 ### 30. State schema viewer
 
+**Status: 🟡 pending.**
+
 Show registered project state namespaces and current values.
 
 ### 31. Mini-game preview/editor hooks
+
+**Status: 🟡 pending.**
 
 Optional plugin mechanism for project-owned mini-game editors.
 
 ## P2 — Internationalization
 
 ### 32. Dynamic formatting in dialogue and UI
+
+**Status: 🟡 pending.**
 
 Support safe formatting/pluralization/interpolation from state values.
 
@@ -410,19 +482,27 @@ say Cassia "У нас {strategy.supplies} ящиков провианта."
 
 ### 33. Localized data tables
 
+**Status: 🟡 pending.**
+
 Allow project data such as faction names, unit names and event text to be localized without duplicating simulation definitions.
 
 ## P2 — Testing infrastructure
 
 ### 34. Engine integration test harness
 
+**Status: 🟡 pending.**
+
 Add a headless mode or controlled runtime mode that allows tests to advance scripts and systems without opening a visible window.
 
 ### 35. Deterministic RNG service
 
+**Status: 🟡 pending.**
+
 Provide a seeded RNG service for gameplay systems and save/load reproducibility.
 
 ### 36. Golden-state comparison
+
+**Status: 🟡 pending.**
 
 Allow a test to compare serialized state after a known sequence of inputs/actions.
 
@@ -472,31 +552,31 @@ Those belong to `inhRPG`.
 
 ### Phase 1
 
-1. GameSystem API.
-2. Namespaced serializable state.
-3. Event bus.
-4. Scene stack.
-5. Input actions.
-6. Save schema/versioning.
-7. Dynamic UI binding.
-8. Deterministic RNG.
+1. GameSystem API. **🟢**
+2. Namespaced serializable state. **🟢**
+3. Event bus. **🟢**
+4. Scene stack. **🟢 primitive / 🟡 runtime integration**
+5. Input actions. **🟢 primitive / 🟡 runtime migration**
+6. Save schema/versioning. **🟢 primitive / 🟡 runtime integration**
+7. Dynamic UI binding. **🟡**
+8. Deterministic RNG. **🟡**
 
 ### Phase 2
 
-9. Map surface.
-10. Camera/selection/pathfinding.
-11. Time scheduler.
-12. Notifications.
-13. Audio channels.
-14. Rich character visual states.
+9. Map surface. **🟡**
+10. Camera/selection/pathfinding. **🟢 primitives**
+11. Time scheduler. **🟡**
+12. Notifications. **🟡**
+13. Audio channels. **🟡**
+14. Rich character visual states. **🟡**
 
 ### Phase 3
 
-15. Mini-game scene API.
-16. Headless/integration test harness.
-17. Debug overlay/state inspector.
-18. Map editor.
-19. Campaign event editor.
+15. Mini-game scene API. **🟡**
+16. Headless/integration test harness. **🟡**
+17. Debug overlay/state inspector. **🟡**
+18. Map editor. **🟡**
+19. Campaign event editor. **🟡**
 
 ## Definition of done for engine support
 

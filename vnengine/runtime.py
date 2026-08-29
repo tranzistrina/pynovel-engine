@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 import pygame
 from vnengine.script.parser import VNParser
-from vnengine.core.engine import Runtime
+from vnengine.extensions.runtime import ExtensibleRuntime as Runtime
 from vnengine.render.display import Renderer
 from vnengine.ui.menu import GameMenu
 from vnengine.ui.title_screen import TitleScreen
@@ -87,7 +87,8 @@ class Game:
         while self.runtime.state.running:
             for event in pygame.event.get():
                 if event.type==pygame.QUIT:self.runtime.state.running=False
-                elif event.type==pygame.KEYDOWN:self._handle_key(event.key)
+                elif event.type==pygame.KEYDOWN:
+                    if not self.runtime.dispatch_input(event): self._handle_key(event.key)
                 elif event.type==pygame.MOUSEBUTTONDOWN and event.button==1:
                     if self.at_title:self._handle_title_result(self.title.handle_mouse(event.pos,self.screen.get_size()))
                     elif self.menu.is_open:self._handle_menu_result(self.menu.handle_mouse(event.pos,self.screen.get_size()))
@@ -111,6 +112,7 @@ class Game:
                 self.renderer.draw(self.screen,s)
                 if self.ui:self.ui.draw(self.screen)
                 if self.menu.is_open:self.menu.draw(self.screen,s.history)
+                self.runtime.scene_stack.draw(self.screen)
             else:self.title.draw(self.screen)
             pygame.display.flip(); clock.tick(60)
-        self._save_profile(); pygame.quit()
+        self.runtime.shutdown(); self._save_profile(); pygame.quit()

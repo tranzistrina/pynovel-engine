@@ -91,3 +91,29 @@ class ExtensibleRuntime(CoreRuntime):
             system=self.systems.get(name)
             if system is not None and hasattr(system,"deserialize"):system.deserialize(payload)
         self.rng.deserialize(b.rng);self.scheduler.deserialize(b.state.get("scheduler",{}))
+    def advance(self):
+        if not self.state.running:return
+        now=__import__("pygame").time.get_ticks()/1000.0
+        if self.state.wait_until and now<self.state.wait_until:return
+        self.state.wait_until=0
+        if self.state.paused_for_input:
+            if self.state.dialogue:
+                self.state.dialogue=None;self.state.paused_for_input=False
+            else:return
+        while self.state.index<len(self.state.story.actions) and self.state.running and not self.state.paused_for_input:
+            action=self.state.story.actions[self.state.index];self.state.index+=1;self.emit("before_action",{"action":action.kind,"data":action.data})
+            if self.state.conditional_stack and not all(self.state.conditional_stack) and action.kind not in ("if","else","endif"):continue
+            extension=self._extension_handlers.get(action.kind)
+            if extension is not None:extension(action)
+            elif self.commands.dispatch(action.kind,self,action):pass
+            else:
+                handler=self._handlers.get(action.kind)
+                if handler is None:raise RuntimeError(f"No runtime handler for action: {action.kind}")
+                handler(action)
+            self.emit("after_action",{"action":action.kind,"data":action.data})
+            if action.kind in ("say","choice","end","open_scene"):break
+    def shutdown(self):
+        self.emit("project.shutdown",{})
+        for system in self.systems.values():
+            close=getattr(system,"shutdown",None)
+            if close is not None:close()

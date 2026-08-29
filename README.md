@@ -6,9 +6,9 @@
 
 ## English
 
-PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI/animation editing, asset management, live animation preview, and a portable runtime.
+PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI/animation editing, asset management, live graphical animation preview, and a portable runtime.
 
-### Current version: 0.27.0
+### Current version: 0.28.0
 
 ### Features
 
@@ -27,17 +27,12 @@ PyNovel Engine is a Python-first visual novel toolkit with readable scripting, v
 - UI hierarchy with safe reparenting and unique-id cloning;
 - multi-selection and group transforms;
 - box-selection geometry and group bounding-box transforms;
-- Asset Catalog with image, audio, video, font, data, script and other resource types;
-- persistent `.pynovel/assets.json` project asset index;
-- `pynovel assets scan <project>` resource scanning command;
-- Asset Browser with search, type filtering, image/text preview, path copy and drag-and-drop;
-- dropping image assets into Scene creates character objects;
-- dropping image assets into UI creates image widgets;
-- animation timeline with tracks, keyframes, easing, play/pause/stop/seek and loop;
-- animated numeric properties including `x`, `y`, `scale`, `opacity`, and `rotation`;
-- Animation Editor with timeline, tracks, keyframe editing and live preview;
-- runtime timeline player for `animation.json`;
-- `.vn` commands `play_animation`, `animation`, `stop_animation` and `rotate`;
+- Asset Catalog and Asset Browser with search, filtering, preview, path copy and drag-and-drop;
+- scene/UI asset drops that create project objects automatically;
+- animation timelines with tracks, keyframes, easing, playback and looping;
+- animated `x`, `y`, `scale`, `opacity`, and `rotation` properties;
+- Animation Editor with tracks, keyframes, playhead and live graphical preview;
+- runtime `animation.json` player and `.vn` animation commands;
 - PyInstaller helper and GitHub Actions build support.
 
 ### Install
@@ -60,7 +55,19 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains **Script**, **Scene**, **Dialogue**, **UI**, **Animation**, and **Assets** workflows. The Animation Editor includes live transform preview driven by the current playhead.
+The editor contains **Script**, **Scene**, **Dialogue**, **UI**, **Animation**, and **Assets** workflows. Animation Preview renders project characters on a 1280x720 canvas and updates them from the current timeline playhead.
+
+### Animation timeline
+
+Animations are stored in `animation.json` as tracks containing keyframes. A timeline can animate `x`, `y`, `scale`, `opacity`, and `rotation`.
+
+Play from a script with `play_animation AliceEnter`. The aliases `animation AliceEnter` and `stop_animation AliceEnter` are also supported.
+
+For simple one-off rotation:
+
+```text
+rotate Alice 6 0.25
+```
 
 ### Asset pipeline
 
@@ -69,37 +76,6 @@ pynovel assets scan examples/demo
 ```
 
 The generated index is stored at `.pynovel/assets.json` and uses normalized project-relative paths. Assets can be dragged from the Asset Browser onto compatible editor canvases.
-
-### Animation timeline
-
-Animations are stored in `animation.json` as tracks containing keyframes. A single timeline can use the compact format:
-
-```json
-{
-  "name": "AliceEnter",
-  "loop": false,
-  "tracks": [
-    {
-      "target": "Alice",
-      "property": "x",
-      "keys": [
-        {"time": 0.0, "value": 0.0, "easing": "ease_out"},
-        {"time": 0.6, "value": 50.0, "easing": "ease_in_out"}
-      ]
-    }
-  ]
-}
-```
-
-Play it from a script with `play_animation AliceEnter`. The aliases `animation AliceEnter` and `stop_animation AliceEnter` are also supported.
-
-The Animation Editor can move the playhead, play/pause/stop the preview, and display live `x`, `y`, `scale`, `opacity`, and `rotation` values for timeline targets.
-
-For simple one-off motion, use:
-
-```text
-rotate Alice 6 0.25
-```
 
 ### UI editing
 
@@ -110,8 +86,6 @@ rotate Alice 6 0.25
 - `Ctrl+S`: save;
 - Arrow keys: move by 1 px;
 - Shift + Arrow: move by 10 px.
-
-The editor-side geometry layer provides normalized marquee rectangles, intersection checks, group bounds and proportional group scaling for canvas tools.
 
 ### Build
 
@@ -126,9 +100,9 @@ Build native bundles separately on Windows, macOS and Linux.
 
 ## Русский
 
-PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием сцен, диалогов, UI и анимаций, управлением ресурсами, live-preview анимаций и переносимым runtime.
+PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием сцен, диалогов, UI и анимаций, управлением ресурсами, графическим live-preview анимаций и переносимым runtime.
 
-### Текущая версия: 0.27.0
+### Текущая версия: 0.28.0
 
 ### Возможности
 
@@ -137,7 +111,7 @@ PyNovel Engine — кроссплатформенный движок и реда
 - диалоги, повествование, выборы, `label` и `jump`;
 - переменные и безопасные выражения с `if / else / endif`;
 - музыка, звуки, ожидания, переходы и tween-анимации;
-- команда `rotate <персонаж> <градусы> <длительность>` для простого плавного поворота;
+- команда `rotate <персонаж> <градусы> <длительность>`;
 - сохранение/загрузка, история, пять слотов и профиль игрока;
 - Title Screen, игровое меню и локализация;
 - UI-компоненты runtime: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
@@ -146,16 +120,13 @@ PyNovel Engine — кроссплатформенный движок и реда
 - визуальные редакторы Scene, Dialogue и UI;
 - hierarchy UI с безопасным reparenting и уникальными ID;
 - multi-selection и групповые трансформации;
-- геометрия рамки выделения и bounding box группы;
-- Asset Catalog, индекс `.pynovel/assets.json` и Asset Browser;
-- drag-and-drop ассетов между canvas редактора;
-- перетаскивание изображения в Scene автоматически создаёт персонажа;
-- перетаскивание изображения в UI автоматически создаёт `Image`;
-- animation timeline с tracks, keyframes, easing, loop и seek;
+- geometry для marquee selection и bounding box групп;
+- Asset Catalog и Asset Browser с поиском, фильтрами, предпросмотром, копированием пути и drag-and-drop;
+- автоматическое создание объектов при переносе ассета на Scene/UI canvas;
+- animation timeline с tracks, keyframes, easing, playback и loop;
 - анимация `x`, `y`, `scale`, `opacity` и `rotation`;
-- Animation Editor с live-preview по текущему playhead;
-- runtime-проигрыватель `animation.json`;
-- команды `.vn` `play_animation`, `animation`, `stop_animation` и `rotate`;
+- Animation Editor с timeline, keyframes, playhead и графическим live-preview;
+- runtime-проигрыватель `animation.json` и команды `.vn` для анимаций;
 - сборка через PyInstaller и GitHub Actions.
 
 ### Установка
@@ -179,7 +150,19 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI**, **Animation** и **Assets**. В Animation Editor текущий playhead сразу обновляет значения трансформации выбранных объектов.
+В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI**, **Animation** и **Assets**. Animation Preview отображает персонажей проекта на canvas 1280x720 и обновляет их состояние по текущему playhead.
+
+### Анимационная timeline
+
+Анимации хранятся в `animation.json` как набор треков с ключевыми кадрами. Можно анимировать `x`, `y`, `scale`, `opacity` и `rotation`.
+
+Запуск из сценария: `play_animation AliceEnter`. Также доступны алиасы `animation AliceEnter` и `stop_animation AliceEnter`.
+
+Для простого плавного поворота:
+
+```text
+rotate Alice 6 0.25
+```
 
 ### Управление ресурсами
 
@@ -187,38 +170,7 @@ pynovel-editor examples/demo
 pynovel assets scan examples/demo
 ```
 
-Индекс сохраняется в `.pynovel/assets.json`, а пути внутри проекта хранятся в нормализованном относительном виде. Из Asset Browser изображения можно перетаскивать на совместимые canvas.
-
-### Анимационная timeline
-
-Анимации хранятся в `animation.json` как набор треков с ключевыми кадрами. Например:
-
-```json
-{
-  "name": "AliceEnter",
-  "loop": false,
-  "tracks": [
-    {
-      "target": "Alice",
-      "property": "x",
-      "keys": [
-        {"time": 0.0, "value": 0.0, "easing": "ease_out"},
-        {"time": 0.6, "value": 50.0, "easing": "ease_in_out"}
-      ]
-    }
-  ]
-}
-```
-
-Запуск из сценария: `play_animation AliceEnter`. Также доступны алиасы `animation AliceEnter` и `stop_animation AliceEnter`.
-
-В Animation Editor можно двигать playhead, запускать/останавливать preview и вживую видеть `x`, `y`, `scale`, `opacity` и `rotation` целевых объектов.
-
-Для простой одноразовой анимации можно использовать:
-
-```text
-rotate Alice 6 0.25
-```
+Индекс сохраняется в `.pynovel/assets.json`, а пути внутри проекта хранятся в нормализованном относительном виде. Из Asset Browser ассеты можно перетаскивать на совместимые canvas.
 
 ### UI Editor
 
@@ -229,8 +181,6 @@ rotate Alice 6 0.25
 - `Ctrl+S`: сохранить;
 - стрелки: перемещение на 1 пиксель;
 - `Shift + Стрелки`: перемещение на 10 пикселей.
-
-Editor-слой также содержит переиспользуемую геометрию для marquee selection, проверки пересечений, bounding box группы и пропорционального масштабирования.
 
 ### Сборка
 

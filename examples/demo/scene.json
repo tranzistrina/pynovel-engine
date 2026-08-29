@@ -1,0 +1,15 @@
+{
+  "name": "Intro",
+  "resolution": [1280, 720],
+  "background": "assets/background.png",
+  "characters": [
+    {
+      "name": "Alice",
+      "image": "assets/alice.png",
+      "x": 50,
+      "y": 100,
+      "scale": 1.0,
+      "visible": true
+    }
+  ]
+}

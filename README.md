@@ -6,9 +6,9 @@
 
 ## English
 
-PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI editing, asset management, and a portable runtime.
+PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI editing, asset management, animation timelines, and a portable runtime.
 
-### Current version: 0.23.0
+### Current version: 0.24.0
 
 ### Features
 
@@ -22,7 +22,7 @@ PyNovel Engine is a Python-first visual novel toolkit with readable scripting, v
 - runtime UI widgets: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
 - anchors, percentage dimensions, visibility and z-order;
 - declarative `ui.json` interfaces and button actions;
-- visual Scene, Dialogue and UI editors;
+- visual Scene, Dialogue, UI and Animation editors;
 - UI hierarchy with safe reparenting and unique-id cloning;
 - multi-selection and group transforms;
 - box-selection geometry and group bounding-box transforms;
@@ -30,8 +30,10 @@ PyNovel Engine is a Python-first visual novel toolkit with readable scripting, v
 - persistent `.pynovel/assets.json` project asset index;
 - `pynovel assets scan <project>` resource scanning command;
 - Asset Browser with search, type filtering, image/text preview and path copy;
-- drag-and-drop assets from Asset Browser into Scene and UI canvases;
-- automatic character/image node creation with unique IDs;
+- drag-and-drop asset payloads shared by editor canvases;
+- multi-track animation timelines with keyframes and easing;
+- animation `play`, `pause`, `stop`, `seek`, looping and JSON serialization;
+- Animation Editor with tracks, keyframe list, playhead and `animation.json` persistence;
 - PyInstaller helper and GitHub Actions build support.
 
 ### Install
@@ -54,7 +56,7 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains **Script**, **Scene**, **Dialogue**, **UI**, and **Assets** workflows.
+The editor contains **Script**, **Scene**, **Dialogue**, **UI**, **Animation**, and **Assets** workflows.
 
 ### Asset pipeline
 
@@ -62,7 +64,30 @@ The editor contains **Script**, **Scene**, **Dialogue**, **UI**, and **Assets** 
 pynovel assets scan examples/demo
 ```
 
-The generated index is stored at `.pynovel/assets.json` and uses normalized project-relative paths. Assets can then be dragged directly onto the Scene or UI canvas.
+The generated index is stored at `.pynovel/assets.json` and uses normalized project-relative paths.
+
+### Animation timeline
+
+Animations are stored in `animation.json` as tracks containing keyframes:
+
+```json
+{
+  "name": "Alice Enter",
+  "loop": false,
+  "tracks": [
+    {
+      "target": "Alice",
+      "property": "x",
+      "keys": [
+        {"time": 0.0, "value": 0.0, "easing": "ease_out"},
+        {"time": 0.6, "value": 50.0, "easing": "ease_in_out"}
+      ]
+    }
+  ]
+}
+```
+
+Supported easing names: `linear`, `ease_in`, `ease_out`, `ease_in_out`, and `smooth`.
 
 ### UI editing
 
@@ -73,6 +98,8 @@ The generated index is stored at `.pynovel/assets.json` and uses normalized proj
 - `Ctrl+S`: save;
 - Arrow keys: move by 1 px;
 - Shift + Arrow: move by 10 px.
+
+The editor-side geometry layer provides normalized marquee rectangles, intersection checks, group bounds and proportional group scaling for canvas tools.
 
 ### Build
 
@@ -87,9 +114,9 @@ Build native bundles separately on Windows, macOS and Linux.
 
 ## Русский
 
-PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием, управлением ресурсами и переносимым runtime.
+PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием, управлением ресурсами, анимационной timeline и переносимым runtime.
 
-### Текущая версия: 0.23.0
+### Текущая версия: 0.24.0
 
 ### Возможности
 
@@ -103,7 +130,7 @@ PyNovel Engine — кроссплатформенный движок и реда
 - UI-компоненты runtime: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
 - anchors, процентные размеры, видимость и `z`-порядок;
 - декларативный `ui.json` и actions кнопок;
-- визуальные редакторы Scene, Dialogue и UI;
+- визуальные редакторы Scene, Dialogue, UI и Animation;
 - hierarchy UI с безопасным reparenting и уникальными ID;
 - multi-selection и групповые трансформации;
 - геометрия рамки выделения и bounding box группы;
@@ -111,8 +138,10 @@ PyNovel Engine — кроссплатформенный движок и реда
 - постоянный индекс `.pynovel/assets.json`;
 - команда `pynovel assets scan <project>`;
 - Asset Browser с поиском, фильтрами, предпросмотром и копированием пути;
-- drag-and-drop ассетов из Asset Browser прямо на Scene и UI canvas;
-- автоматическое создание персонажей и Image-виджетов с уникальными ID;
+- общий drag-and-drop протокол ассетов между canvas редактора;
+- многотрековая animation timeline с ключевыми кадрами и easing;
+- `play`, `pause`, `stop`, `seek`, loop и JSON-сериализация анимаций;
+- Animation Editor с треками, списком ключей, playhead и сохранением в `animation.json`;
 - сборка через PyInstaller и GitHub Actions.
 
 ### Установка
@@ -136,7 +165,7 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI** и **Assets**. Asset Browser индексирует ресурсы проекта и позволяет перетаскивать их непосредственно на canvas.
+В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI**, **Animation** и **Assets**.
 
 ### Управление ресурсами
 
@@ -145,6 +174,29 @@ pynovel assets scan examples/demo
 ```
 
 Индекс сохраняется в `.pynovel/assets.json`, а пути внутри проекта хранятся в нормализованном относительном виде.
+
+### Анимационная timeline
+
+Анимации хранятся в `animation.json` как набор треков с ключевыми кадрами:
+
+```json
+{
+  "name": "Alice Enter",
+  "loop": false,
+  "tracks": [
+    {
+      "target": "Alice",
+      "property": "x",
+      "keys": [
+        {"time": 0.0, "value": 0.0, "easing": "ease_out"},
+        {"time": 0.6, "value": 50.0, "easing": "ease_in_out"}
+      ]
+    }
+  ]
+}
+```
+
+Поддерживаются `linear`, `ease_in`, `ease_out`, `ease_in_out` и `smooth`.
 
 ### UI Editor
 
@@ -155,6 +207,8 @@ pynovel assets scan examples/demo
 - `Ctrl+S`: сохранить;
 - стрелки: перемещение на 1 пиксель;
 - `Shift + Стрелки`: перемещение на 10 пикселей.
+
+Editor-слой также содержит переиспользуемую геометрию для marquee selection, проверки пересечений, bounding box группы и пропорционального масштабирования.
 
 ### Сборка
 

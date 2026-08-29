@@ -3,46 +3,46 @@ from typing import Any
 from .project import ProjectLoader
 from .scene_registry import SceneRegistry
 from .scene_stack import SceneStack
+from .transition import TransitionManager
 
 
 class ProjectRuntime:
     """Lifecycle wrapper for data-driven projects with extensible scenes."""
     def __init__(self, project: str, *, emit=None, scenes: SceneRegistry | None = None):
-        self.project = ProjectLoader(project)
-        self.emit = emit or (lambda name, data: None)
-        self.scenes = scenes or SceneRegistry()
-        self.stack = SceneStack()
+        self.project = ProjectLoader(project); self.emit = emit or (lambda name, data: None)
+        self.scenes = scenes or SceneRegistry(); self.stack = SceneStack(); self.transitions = TransitionManager()
         self.world = None; self.scene_id: str | None = None; self.scene: Any = None; self.running = False
-        if not self.scenes.has("map"):
-            self.scenes.register("map", lambda context: context.runtime.project.load_map(emit=context.runtime.emit))
+        if not self.scenes.has("map"): self.scenes.register("map", lambda context: context.runtime.project.load_map(emit=context.runtime.emit))
 
-    def start(self) -> None:
-        self.switch_scene(self.project.manifest.start_scene)
-        self.running = True; self.emit("runtime.started", {"scene": self.scene_id})
+    def start(self, *, transition: tuple[str, float] | None = None) -> None:
+        self.switch_scene(self.project.manifest.start_scene, transition=transition); self.running = True
+        self.emit("runtime.started", {"scene": self.scene_id})
 
-    def switch_scene(self, scene_id: str) -> Any:
+    def switch_scene(self, scene_id: str, *, transition: tuple[str, float] | None = None) -> Any:
         previous = self.scene_id
+        if transition: self.transitions.start(*transition)
         if self.scene is not None: self._call(self.scene, "exit")
-        scene = self.scenes.create(scene_id, self)
-        self.stack.clear(); self.stack.push(scene_id, scene)
-        self.scene_id = scene_id; self.scene = scene; self.world = getattr(scene, "world", scene)
-        self._call(scene, "enter")
+        scene = self.scenes.create(scene_id, self); self.stack.clear(); self.stack.push(scene_id, scene)
+        self.scene_id = scene_id; self.scene = scene; self.world = getattr(scene, "world", scene); self._call(scene, "enter")
         self.emit("scene.changed", {"from": previous, "to": scene_id}); return scene
 
-    def push_scene(self, scene_id: str) -> Any:
+    def push_scene(self, scene_id: str, *, transition: tuple[str, float] | None = None) -> Any:
+        if transition: self.transitions.start(*transition)
         if self.scene is not None: self._call(self.scene, "pause")
-        scene = self.scenes.create(scene_id, self); self.stack.push(scene_id, scene)
-        self.scene_id = scene_id; self.scene = scene; self.world = getattr(scene, "world", scene)
-        self._call(scene, "enter"); self.emit("scene.pushed", {"scene": scene_id}); return scene
+        scene = self.scenes.create(scene_id, self); self.stack.push(scene_id, scene); self.scene_id = scene_id
+        self.scene = scene; self.world = getattr(scene, "world", scene); self._call(scene, "enter")
+        self.emit("scene.pushed", {"scene": scene_id}); return scene
 
-    def pop_scene(self) -> Any:
+    def pop_scene(self, *, transition: tuple[str, float] | None = None) -> Any:
         if len(self.stack) <= 1: raise IndexError("Cannot pop the root scene")
-        self._call(self.scene, "exit"); self.stack.pop(); self.scene_id = self.stack.current_id; self.scene = self.stack.current; self.world = getattr(self.scene, "world", self.scene)
-        self._call(self.scene, "resume"); self.emit("scene.popped", {"scene": self.scene_id}); return self.scene
+        if transition: self.transitions.start(*transition)
+        self._call(self.scene, "exit"); self.stack.pop(); self.scene_id = self.stack.current_id
+        self.scene = self.stack.current; self.world = getattr(self.scene, "world", self.scene); self._call(self.scene, "resume")
+        self.emit("scene.popped", {"scene": self.scene_id}); return self.scene
 
     def update(self, dt: float) -> None:
         if not self.running or self.scene is None: return
-        update = getattr(self.scene, "update", None)
+        self.transitions.update(dt); update = getattr(self.scene, "update", None)
         if callable(update): update(max(0.0, float(dt)))
 
     def stop(self) -> None:

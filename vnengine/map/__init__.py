@@ -6,6 +6,7 @@ from .controller import MapController, MapEvent
 from .interaction import MapAction, MapInteraction
 from .model import Camera2D, MapConnection, MapDefinition, MapNode, MapPoint
 from .movement import Movement, MovementController
+from .movement_command import MovementCommand, MovementOrder
 from .multiselect import MultiSelection, SelectionChange
 from .pathfinding import Route, shortest_path
 from .route_builder import RouteBuilder, RouteRequest
@@ -15,8 +16,8 @@ from .surface import MapMarker, MapSurface
 __all__ = [
     "Camera2D", "MapConnection", "MapDefinition", "MapNode", "MapPoint",
     "Route", "shortest_path", "RouteBuilder", "RouteRequest",
-    "Movement", "MovementController", "Selectable", "SelectionModel",
-    "MultiSelection", "SelectionChange", "MapController", "MapEvent",
-    "MapAction", "MapInteraction", "BoxSelector", "BoxSelectionController",
-    "MapMarker", "MapSurface",
+    "Movement", "MovementController", "MovementCommand", "MovementOrder",
+    "Selectable", "SelectionModel", "MultiSelection", "SelectionChange",
+    "MapController", "MapEvent", "MapAction", "MapInteraction",
+    "BoxSelector", "BoxSelectionController", "MapMarker", "MapSurface",
 ]

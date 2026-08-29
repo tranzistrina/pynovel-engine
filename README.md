@@ -2,7 +2,7 @@
 
 Python-first visual novel engine targeting Windows, macOS and Linux.
 
-## 0.7 capabilities
+## 0.8 capabilities
 
 - readable `.vn` scripting language
 - scene/title commands, backgrounds and characters
@@ -14,7 +14,7 @@ Python-first visual novel engine targeting Windows, macOS and Linux.
 - character expressions plus `expression`, `move`, and `scale` commands
 - eased character position and scale tweening
 - save/load state with background, characters and history
-- in-game menu with Resume, Save, Load, History and Settings
+- in-game menu with Resume, New Game, Save, Load, History and Settings
 - five save slots
 - persistent text speed and volume settings
 - mouse and keyboard menu navigation

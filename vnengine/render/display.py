@@ -1,46 +1,54 @@
 from __future__ import annotations
 import pygame
-from vnengine.core.engine import GameState
+from vnengine.core.engine import GameState, POSITIONS
 
 class Renderer:
-    def __init__(self):self.font=None; self.small=None; self.title=None
-    def _fonts(self):
-        if self.font is None:self.font=pygame.font.SysFont('Arial',30); self.small=pygame.font.SysFont('Arial',20); self.title=pygame.font.SysFont('Arial',34,True)
-    def _fit(self,surface,rect):
-        sw,sh=surface.get_size(); rw,rh=rect.size; scale=min(rw/sw,rh/sh); return pygame.transform.smoothscale(surface,(max(1,int(sw*scale)),max(1,int(sh*scale))))
-    def draw(self,screen,state:GameState):
-        self._fonts(); w,h=screen.get_size(); screen.fill((18,22,34))
-        if state.background:
-            img=self._fit(state.background,pygame.Rect(0,0,w,h)); screen.blit(img,img.get_rect(center=(w//2,h//2)))
-        else:
-            pygame.draw.rect(screen,(35,48,78),(0,0,w,h))
-            pygame.draw.circle(screen,(232,207,122),(int(w*.78),int(h*.18)),int(h*.09))
-        positions={'left':.23,'center':.50,'right':.77}
-        for name,char in state.characters.items():
-            surf=state.character_surfaces.get(name)
-            if surf is None:
-                r=pygame.Rect(0,0,int(w*.28),int(h*.72)); r.midbottom=(int(w*positions.get(char.position,.5)),h-70); pygame.draw.ellipse(screen,(225,185,165),r); pygame.draw.rect(screen,(120,145,195),(r.x+r.w*.2,r.y+r.h*.42,r.w*.6,r.h*.58),border_radius=30); continue
-            img=self._fit(surf,pygame.Rect(0,0,w*.42,h*.88)); screen.blit(img,img.get_rect(midbottom=(int(w*positions.get(char.position,.5)),h-70)))
-        if state.choice_options:self.draw_choices(screen,state.choice_options)
-        elif state.dialogue:self.draw_dialogue(screen,state)
-        if state.transition_until>pygame.time.get_ticks()/1000.0:
-            overlay=pygame.Surface((w,h),pygame.SRCALPHA); overlay.fill((0,0,0,140)); screen.blit(overlay,(0,0))
-    def _wrap(self,text,max_chars=75):
-        words=text.split(); out=[]; line=''
+    def __init__(self):
+        self.font = pygame.font.Font(None, 32); self.small = pygame.font.Font(None, 24); self.title = pygame.font.Font(None, 38)
+    def _fit(self, surface, max_w, max_h):
+        sw, sh = surface.get_size(); scale = min(max_w/sw, max_h/sh)
+        return pygame.transform.smoothscale(surface, (max(1, int(sw*scale)), max(1, int(sh*scale))))
+    def _wrap(self, text, width):
+        words, lines, current = text.split(), [], ""
         for word in words:
-            if len(line)+len(word)+1>max_chars:out.append(line); line=word
-            else:line=(line+' '+word).strip()
-        if line:out.append(line)
-        return out
-    def draw_dialogue(self,screen,state):
-        w,h=screen.get_size(); box=pygame.Rect(36,h-220,w-72,174); pygame.draw.rect(screen,(12,15,24),box,border_radius=16); pygame.draw.rect(screen,(225,225,235),box,2,border_radius=16)
-        speaker,text=state.dialogue; y=box.y+20
-        if speaker:screen.blit(self.title.render(speaker,True,(248,218,132)),(box.x+25,y)); y+=42
-        shown=text[:int(state.text_progress)]
-        for line in self._wrap(shown):screen.blit(self.font.render(line,True,(242,242,246)),(box.x+25,y)); y+=34
-        state.text_progress=min(len(text),state.text_progress+0.8)
-        screen.blit(self.small.render('Enter/Space continue   F5 save   F9 load   F8 auto   F7 skip',True,(170,178,190)),(box.x+25,box.bottom-30))
-    def draw_choices(self,screen,options):
-        w,h=screen.get_size(); y=int(h*.33)
-        for i,opt in enumerate(options,1):
-            r=pygame.Rect(int(w*.17),y,int(w*.66),60); pygame.draw.rect(screen,(18,23,38),r,border_radius=12); pygame.draw.rect(screen,(220,220,230),r,2,border_radius=12); screen.blit(self.font.render(f'{i}. {opt.text}',True,(242,242,246)),(r.x+18,r.y+14)); y+=74
+            candidate = f"{current} {word}".strip()
+            if self.small.size(candidate)[0] <= width: current = candidate
+            else:
+                if current: lines.append(current)
+                current = word
+        if current: lines.append(current)
+        return lines or [""]
+    def draw(self, screen: pygame.Surface, state: GameState):
+        w, h = screen.get_size(); screen.fill((16, 18, 28))
+        if state.background:
+            bg = self._fit(state.background, w, h); screen.blit(bg, bg.get_rect(center=(w//2, h//2)))
+        for name, char in state.characters.items():
+            surf = state.character_surfaces.get(name)
+            if not surf: continue
+            img = self._fit(surf, w*.42, h*.86); x = int(w*POSITIONS.get(char.position,.5)-img.get_width()/2); y = h-img.get_height(); screen.blit(img, (x,y))
+        if state.choice_options: self._draw_choices(screen, state)
+        elif state.dialogue: self._draw_dialogue(screen, state)
+        if state.transition_until > pygame.time.get_ticks()/1000.0:
+            overlay = pygame.Surface((w,h), pygame.SRCALPHA); overlay.fill((0,0,0,120)); screen.blit(overlay,(0,0))
+    def _box(self, screen, rect, alpha=225):
+        surf = pygame.Surface(rect.size, pygame.SRCALPHA); surf.fill((8,10,18,alpha)); screen.blit(surf,rect); pygame.draw.rect(screen,(215,215,225),rect,2,border_radius=10)
+    def _draw_dialogue(self, screen, state):
+        w,h=screen.get_size(); rect=pygame.Rect(30,h-200,w-60,170); self._box(screen,rect); speaker,text=state.dialogue
+        if speaker: screen.blit(self.title.render(speaker,True,(255,220,120)),(52,rect.y+16))
+        visible=text[:int(state.text_progress)]; y=rect.y+(58 if speaker else 28)
+        for line in self._wrap(visible,rect.width-45)[:3]: screen.blit(self.small.render(line,True,(245,245,245)),(52,y)); y+=28
+        screen.blit(self.small.render("Enter / Space  Continue   F5 Save   F9 Load   F7 Skip   F8 Auto   F11 Fullscreen",True,(165,170,182)),(52,rect.bottom-31))
+    def _choice_rect(self, i, screen):
+        w,h=screen.get_size(); total=len(self._last_options)*64+24; rect=pygame.Rect(max(40,w*.12),max(60,(h-total)/2),min(w-80,w*.76),total)
+        return pygame.Rect(rect.x+18,rect.y+12+i*64,rect.width-36,52), rect
+    def _draw_choices(self, screen, state):
+        w,h=screen.get_size(); self._last_options=state.choice_options; total=len(state.choice_options)*64+24; rect=pygame.Rect(max(40,w*.12),max(60,(h-total)/2),min(w-80,w*.76),total); self._box(screen,rect)
+        mx,my=pygame.mouse.get_pos()
+        for i,opt in enumerate(state.choice_options):
+            btn=pygame.Rect(rect.x+18,rect.y+12+i*64,rect.width-36,52); hovered=btn.collidepoint(mx,my); pygame.draw.rect(screen,(52,64,92) if hovered else (30,38,58),btn,border_radius=8); screen.blit(self.small.render(f"{i+1}. {opt.text}",True,(245,245,245)),(btn.x+16,btn.y+14))
+    def choice_at(self,pos,state):
+        w,h=pygame.display.get_surface().get_size(); total=len(state.choice_options)*64+24; rect=pygame.Rect(max(40,w*.12),max(60,(h-total)/2),min(w-80,w*.76),total)
+        for i in range(len(state.choice_options)):
+            btn=pygame.Rect(rect.x+18,rect.y+12+i*64,rect.width-36,52)
+            if btn.collidepoint(pos): return i
+        return None

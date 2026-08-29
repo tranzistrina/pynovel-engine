@@ -47,6 +47,8 @@ class VNParser:
                     actions.append(Action("move", {"name": parts[1], "position": parts[2], "duration": float(parts[3]) if len(parts) > 3 else 0.35}))
                 elif cmd == "scale" and len(parts) >= 3:
                     actions.append(Action("scale", {"name": parts[1], "scale": float(parts[2]), "duration": float(parts[3]) if len(parts) > 3 else 0.35}))
+                elif cmd == "rotate" and len(parts) >= 3:
+                    actions.append(Action("rotate", {"name": parts[1], "rotation": float(parts[2]), "duration": float(parts[3]) if len(parts) > 3 else 0.35}))
                 elif cmd == "play_animation" and len(parts) == 2:
                     actions.append(Action("play_animation", {"name": parts[1]}))
                 elif cmd == "animation" and len(parts) >= 2:

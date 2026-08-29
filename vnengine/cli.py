@@ -6,10 +6,23 @@ from pathlib import Path
 from vnengine.assets.catalog import AssetCatalog, AssetType
 from vnengine.runtime import Game
 from vnengine.project_runtime import ProjectRuntime
+from vnengine.frontends.pygame import PygameFrontend
 
 
 def _is_data_project(project: Path) -> bool:
     return (project / "project.json").is_file()
+
+
+def _run_data_project(project: Path) -> None:
+    frontend = PygameFrontend(title=project.name or "PyNovel Engine")
+    frontend.open()
+    runtime = ProjectRuntime(project, frontend=frontend)
+    try:
+        runtime.viewport = frontend.screen.get_rect()
+        from vnengine.project_runner import ProjectRunner
+        ProjectRunner(runtime, poll_events=frontend.events, present=frontend.present, target=frontend.screen, clock=frontend.tick).run()
+    finally:
+        frontend.close()
 
 
 def main() -> None:
@@ -23,14 +36,8 @@ def main() -> None:
     scan.add_argument("project", type=Path)
     args = parser.parse_args()
     if args.command == "run":
-        if _is_data_project(args.project):
-            runtime = ProjectRuntime(args.project)
-            runtime.start()
-            print(f"Started project: {runtime.project.manifest.name}")
-            print(f"Scene: {runtime.scene_id}")
-            runtime.stop()
-        else:
-            Game(args.project).run()
+        if _is_data_project(args.project): _run_data_project(args.project)
+        else: Game(args.project).run()
     elif args.command == "assets" and args.assets_command == "scan":
         catalog = AssetCatalog(args.project); entries = catalog.scan(); index_path = catalog.write_index()
         counts = {asset_type.value: len(catalog.by_type(asset_type)) for asset_type in AssetType}

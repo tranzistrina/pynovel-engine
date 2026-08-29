@@ -8,7 +8,7 @@
 
 PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing and a portable runtime.
 
-### Current version: 0.16.0
+### Current version: 0.17.0
 
 ### Current capabilities
 
@@ -30,12 +30,17 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - declarative project UI in `ui.json`;
 - UI button actions such as `new_game`, `menu`, `continue`, `quit` and `jump:<label>`;
 - visual UI Editor with hierarchy, canvas and Inspector;
-- UI Editor undo/redo, duplicate, delete, canvas positioning and resize;
-- alignment tools and keyboard movement;
+- UI Editor undo/redo, duplicate, delete and canvas positioning;
+- resize handle and alignment tools;
 - reusable UI hierarchy model with safe reparenting between `Panel` containers;
 - clone operations with unique IDs;
 - group translation and sequential z-order helpers;
-- shared multi-selection model for editor tooling;
+- shared multi-selection model;
+- Ctrl-click multi-selection in the UI canvas and hierarchy;
+- group move, duplicate and delete operations;
+- reparent selected widgets into a target `Panel`;
+- group z-order assignment;
+- keyboard movement with arrows and Shift for larger steps;
 - visual Scene Editor;
 - visual Dialogue Graph Editor;
 - graph-to-`.vn` compiler;
@@ -66,19 +71,18 @@ The editor contains Script, Scene, Dialogue and UI workflows.
 
 ### UI Editor
 
-The UI tab provides a visual canvas for `ui.json`. Create widgets, select them from the hierarchy or canvas, edit them in Inspector, move and resize them, then save.
-
-The shared hierarchy and selection models support safe reparenting, cloning, multi-selection and group transforms without tying those operations to Qt.
+The UI tab provides a visual canvas for `ui.json`. Create widgets, select one or many from the hierarchy or canvas, edit the active widget in Inspector, move and resize it, duplicate or delete selections, reparent widgets into `Panel` containers, then save.
 
 Keyboard shortcuts:
 
-- `Delete`: delete selected widget
-- `Ctrl+D`: duplicate
+- `Ctrl-click`: add/remove a widget from the selection
+- `Delete`: delete selected widgets
+- `Ctrl+D`: duplicate selection
 - `Ctrl+Z`: undo
 - `Ctrl+Y`: redo
 - `Ctrl+S`: save
-- `Arrow keys`: move by 1 pixel
-- `Shift + Arrow`: move by 10 pixels
+- `Arrow keys`: move the selection by 1 pixel
+- `Shift + Arrow`: move the selection by 10 pixels
 
 ### UI example
 
@@ -151,7 +155,7 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
 
-### Текущая версия: 0.16.0
+### Текущая версия: 0.17.0
 
 ### Возможности
 
@@ -174,11 +178,15 @@ PyNovel Engine — кроссплатформенный движок и реда
 - действия UI-кнопок `new_game`, `menu`, `continue`, `quit` и `jump:<label>`;
 - визуальный UI Editor с деревом, canvas и Inspector;
 - Undo/Redo, Duplicate, Delete, перемещение и изменение размера;
-- инструменты выравнивания и горячие клавиши;
 - отдельная модель hierarchy с безопасным reparenting между `Panel`;
 - клонирование с уникальными ID;
 - групповой сдвиг и назначение `z`-порядка;
-- общая модель multi-selection для редакторов;
+- общая модель multi-selection;
+- Ctrl-клик для выделения нескольких виджетов на canvas и в hierarchy;
+- групповые перемещение, дублирование и удаление;
+- перенос выбранных виджетов в целевой `Panel`;
+- назначение общего диапазона `z` для группы;
+- перемещение стрелками с шагом 1 или 10 пикселей;
 - визуальный Scene Editor;
 - визуальный Dialogue Graph Editor;
 - компиляция графа в `.vn`;
@@ -205,22 +213,19 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**.
+В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**. Во вкладке UI можно выделять один или несколько компонентов в дереве и на canvas, менять свойства активного элемента, перемещать, дублировать, удалять и переносить элементы в контейнеры `Panel`.
 
 ### UI Editor
 
-Во вкладке UI можно визуально собирать `ui.json`: создавать компоненты, выбирать их в дереве или на canvas, менять свойства в Inspector, перемещать и изменять размер, а затем сохранять результат.
-
-Общая модель hierarchy и selection поддерживает безопасный перенос между контейнерами, клонирование, multi-selection и групповые преобразования без привязки этой логики к Qt.
-
 Горячие клавиши:
 
-- `Delete`: удалить выбранный виджет;
-- `Ctrl+D`: дублировать;
-- `Ctrl+Z`: отменить;
-- `Ctrl+Y`: вернуть;
+- `Ctrl-клик`: добавить или убрать виджет из выделения;
+- `Delete`: удалить выбранные виджеты;
+- `Ctrl+D`: дублировать выделение;
+- `Ctrl+Z`: отменить действие;
+- `Ctrl+Y`: вернуть действие;
 - `Ctrl+S`: сохранить;
-- `Стрелки`: перемещение на 1 пиксель;
+- `Стрелки`: перемещение выделения на 1 пиксель;
 - `Shift + Стрелки`: перемещение на 10 пикселей.
 
 ### Пример UI

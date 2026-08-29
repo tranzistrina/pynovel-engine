@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.19.0
+
+- Added reusable group transform helpers for editor tooling.
+- Added group bounding-box calculation.
+- Added proportional group scaling with configurable origin.
+- Added group left/top alignment helpers.
+- Added horizontal and vertical distribution helpers.
+- Added regression tests for group transforms and layout operations.
+- Updated the main bilingual README for 0.19.0.
+
 ## 0.18.0
 
 - Added a reusable rectangle-selection geometry helper for editor tooling.

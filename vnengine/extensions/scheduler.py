@@ -52,7 +52,13 @@ class GameScheduler:
                 return True
         return False
 
-    def advance(self, ticks: int = 1, dispatch: Callable[[ScheduledEvent], None] | None = None) -> tuple[ScheduledEvent, ...]:
+    def advance_seconds(self, seconds: float, dispatch: Callable[[ScheduledEvent], None] | None = None) -> tuple[ScheduledEvent, ...]:
+        """Advance using wall-clock delta as input while preserving deterministic ticks."""
+        if seconds < 0:
+            raise ValueError("seconds must be non-negative")
+        return self.advance(seconds * self.tick_rate, dispatch)
+
+    def advance(self, ticks: float = 1, dispatch: Callable[[ScheduledEvent], None] | None = None) -> tuple[ScheduledEvent, ...]:
         if ticks < 0:
             raise ValueError("ticks must be non-negative")
         if self.paused or ticks == 0:

@@ -1,0 +1,28 @@
+# PyNovel MVP demo
+scene intro
+
+label start
+say Narrator "Добро пожаловать в PyNovel Engine."
+set visited = true
+choice
+  "Начать историю": start_story
+  "Сразу к финалу": ending
+
+label start_story
+say Alice "Привет! Я первый персонаж нашей демо-игры."
+set affection = 5
+choice
+  "Остаться": stay
+  "Уйти": leave
+
+label stay
+say Alice "Тогда продолжим. У тебя affection = 5."
+jump ending
+
+label leave
+say Alice "Жаль. Но сценарий продолжит работать."
+jump ending
+
+label ending
+say Narrator "Конец демо. F5 сохраняет игру, F9 загружает сохранение."
+end

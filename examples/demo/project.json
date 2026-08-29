@@ -1,1 +1,8 @@
-{"name":"PyNovel Demo","version":1,"resolution":[1280,720],"scenario":"game.vn"}
+{
+  "name": "PyNovel Demo",
+  "version": 1,
+  "resolution": [1280, 720],
+  "scenario": "game.vn",
+  "default_language": "ru",
+  "title_background": "assets/background.png"
+}

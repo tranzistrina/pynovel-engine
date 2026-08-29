@@ -1,11 +1,11 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Callable
+import json
 import operator
 import pygame
 from vnengine.core.expressions import evaluate
 from vnengine.core.model import Action, SaveState, Story, Character
-from vnengine.core.save import read_save, write_save
 
 POSITIONS = {"left": 0.23, "center": 0.50, "right": 0.77}
 
@@ -21,15 +21,34 @@ class GameState:
 class Runtime:
     def __init__(self, story: Story, asset_root: str | Path):
         self.state = GameState(story); self.asset_root = Path(asset_root); self._image_cache = {}; self._sound_cache = {}
-        self._handlers: dict[str, Callable[[Action], None]] = {
+        self._handlers = {
             "background": self._background, "character": self._character, "music": self._music, "music_stop": self._music_stop,
             "sound": self._sound, "say": self._say, "set": self._set, "jump": self._jump, "if": self._if, "else": self._else,
             "endif": self._endif, "choice": self._choice, "wait": self._wait, "transition": self._transition,
             "end": self._end, "scene": lambda a: None,
         }
+
     def asset(self, rel: str) -> Path:
         p = Path(rel); return p if p.is_absolute() else self.asset_root / p
-    def load_image(self, rel: str):
+
+    def apply_scene_manifest(self, path: str | Path = "scene.json"):
+        manifest = Path(path)
+        if not manifest.is_absolute():
+            manifest = self.asset_root / manifest
+        if not manifest.exists():
+            return
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        if data.get("background"):
+            self._background(Action("background", {"path": data["background"]}))
+        for raw in data.get("characters", []):
+            self._character(Action("character", {
+                "name": raw.get("name", "Character"),
+                "image": raw.get("image", ""),
+                "position": raw.get("position", "center"),
+                "action": "show" if raw.get("visible", True) else "hide",
+            }))
+
+    def load_image(self, rel):
         if rel not in self._image_cache: self._image_cache[rel] = pygame.image.load(self.asset(rel)).convert_alpha()
         return self._image_cache[rel]
     def _background(self, a):
@@ -91,9 +110,12 @@ class Runtime:
             self._handlers[action.kind](action)
             if action.kind in ("say", "choice", "end"): break
     def save(self, path: str | Path):
-        write_save(path, SaveState(self.state.index, self.state.variables, self.state.history, self.state.background_path,
-            {k: {"image": v.image, "position": v.position, "visible": v.visible} for k, v in self.state.characters.items()}))
+        write = SaveState(self.state.index, self.state.variables, self.state.history, self.state.background_path,
+            {k: {"image": v.image, "position": v.position, "visible": v.visible} for k, v in self.state.characters.items()})
+        from vnengine.core.save import write_save
+        write_save(path, write)
     def load(self, path: str | Path):
+        from vnengine.core.save import read_save
         data = read_save(path); s = self.state; s.index = data.action_index; s.variables = data.variables; s.history = data.history
         s.background_path = data.background; s.dialogue = None; s.choice_options = []; s.paused_for_input = False; s.conditional_stack.clear()
         if data.background:

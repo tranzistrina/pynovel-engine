@@ -6,16 +6,52 @@ from vnengine.ui.theme import Theme
 from vnengine.ui.widgets import UIWidget, Button, build_widget
 
 class UIDocument:
-    def __init__(self, root: UIWidget, theme: Theme | None = None): self.root=root; self.theme=theme or Theme()
+    def __init__(self, root: UIWidget, theme: Theme | None = None):
+        self.root = root
+        self.theme = theme or Theme()
+
     @classmethod
     def load(cls, path: str | Path, theme_path: str | Path | None = None) -> 'UIDocument':
-        p=Path(path); data=json.loads(p.read_text(encoding='utf-8')); theme=Theme.load(theme_path) if theme_path else Theme(); return cls(build_widget(data, str(p.parent)), theme)
-    def update(self, mouse_pos: tuple[int,int], surface: pygame.Surface) -> None: self._update_buttons(self.root,mouse_pos,surface)
-    def _update_buttons(self, widget: UIWidget, pos: tuple[int,int], surface: pygame.Surface) -> None:
-        if isinstance(widget,Button): widget.update_hover(pos,surface)
-        for child in widget.children:self._update_buttons(child,pos,surface)
-    def click(self,pos:tuple[int,int],surface:pygame.Surface)->bool:
-        widget=self.root.hit_test(pos,surface)
-        if isinstance(widget,Button) and widget.on_click: widget.on_click(); return True
-        return isinstance(widget,Button)
-    def draw(self,surface:pygame.Surface)->None: self.root.draw(surface,self.theme)
+        p = Path(path)
+        data = json.loads(p.read_text(encoding='utf-8'))
+        theme = Theme.load(theme_path) if theme_path else Theme()
+        return cls(build_widget(data, str(p.parent)), theme)
+
+    def update(self, mouse_pos: tuple[int, int], surface: pygame.Surface) -> None:
+        self._update_buttons(self.root, mouse_pos, surface)
+
+    def _update_buttons(self, widget: UIWidget, pos: tuple[int, int], surface: pygame.Surface) -> None:
+        if isinstance(widget, Button):
+            widget.update_hover(pos, surface)
+        for child in widget.children:
+            self._update_buttons(child, pos, surface)
+
+    def click(self, pos: tuple[int, int], surface: pygame.Surface) -> str | None:
+        widget = self.root.hit_test(pos, surface)
+        if isinstance(widget, Button):
+            return getattr(widget, 'action', None) or widget.id
+        return None
+
+    def find(self, widget_id: str) -> UIWidget | None:
+        if self.root.id == widget_id:
+            return self.root
+        return self._find(self.root, widget_id)
+
+    def _find(self, widget: UIWidget, widget_id: str) -> UIWidget | None:
+        for child in widget.children:
+            if child.id == widget_id:
+                return child
+            found = self._find(child, widget_id)
+            if found is not None:
+                return found
+        return None
+
+    def set_visible(self, widget_id: str, visible: bool) -> bool:
+        widget = self.find(widget_id)
+        if widget is None:
+            return False
+        widget.visible = visible
+        return True
+
+    def draw(self, surface: pygame.Surface) -> None:
+        self.root.draw(surface, self.theme)

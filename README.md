@@ -2,24 +2,25 @@
 
 Python-first visual novel engine targeting Windows, macOS and Linux.
 
-## 0.3 capabilities
+## 0.5 capabilities
 
 - readable `.vn` scripting language
 - scene/title commands, backgrounds and characters
 - dialogue and narration with typewriter effect
 - clickable and keyboard choices
-- labels and jumps
-- variables with `=`, `+=`, `-=`, `*=`, `/=`
-- safe expression evaluation
-- `if / else / endif`
+- labels, jumps and variables
+- safe expression evaluation with `if / else / endif`
 - music, sounds, waits and transitions
 - save/load state with background, characters and history
 - Auto and Skip modes
-- mouse and keyboard input
 - resizable window and F11 fullscreen
 - pygame-ce runtime
-- PySide6 desktop editor with project tree, text editing, asset preview, validation and run buttons
-- pytest coverage for parser and expressions
+- PySide6 desktop editor with project tree, script editing, asset preview and validation
+- visual Scene editor with draggable character placement
+- visual Dialogue graph editor with nodes and links
+- dialogue graph JSON saved independently from the compiled script
+- graph-to-`.vn` compiler with validation of missing targets
+- pytest coverage for parser, expressions, scene data and dialogue graphs
 - PyInstaller build helper and GitHub Actions matrix
 
 ## Install
@@ -42,6 +43,8 @@ pynovel run examples/demo
 ```bash
 pynovel-editor examples/demo
 ```
+
+The editor has Script, Scene and Dialogue tabs. In Dialogue, add nodes, edit their properties, move nodes on the canvas, save `dialogue.json`, then compile the graph to `game.vn`.
 
 ## Script example
 

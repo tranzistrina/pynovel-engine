@@ -16,5 +16,7 @@ from .selection import Selectable, SelectionModel
 from .surface import MapMarker, MapSurface
 from .world import MapWorld
 from .world_controller import MapWorldController
+from .playable import MapSelectionHit, PlayableMap
+from .interaction_bridge import PlayableInteractionBridge
 from .commands import CommandResult, MapCommandDispatcher
-__all__ = ["Camera2D","MapConnection","MapDefinition","MapNode","MapPoint","Route","shortest_path","RouteBuilder","RouteRequest","Movement","MovementController","MovementCommand","MovementOrder","MovementPolicy","TerrainPolicy","TerrainRules","terrain_for","connection_terrain","EntityRegistry","MapEntity","MapWorld","MapWorldController","CommandResult","MapCommandDispatcher","Selectable","SelectionModel","MultiSelection","SelectionChange","MapController","MapEvent","MapAction","MapInteraction","BoxSelector","BoxSelectionController","MapMarker","MapSurface"]
+__all__ = ["Camera2D","MapConnection","MapDefinition","MapNode","MapPoint","Route","shortest_path","RouteBuilder","RouteRequest","Movement","MovementController","MovementCommand","MovementOrder","MovementPolicy","TerrainPolicy","TerrainRules","terrain_for","connection_terrain","EntityRegistry","MapEntity","MapWorld","MapWorldController","MapSelectionHit","PlayableMap","PlayableInteractionBridge","CommandResult","MapCommandDispatcher","Selectable","SelectionModel","MultiSelection","SelectionChange","MapController","MapEvent","MapAction","MapInteraction","BoxSelector","BoxSelectionController","MapMarker","MapSurface"]

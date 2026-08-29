@@ -2,7 +2,7 @@
 
 Python-first visual novel engine targeting Windows, macOS and Linux.
 
-## 0.5 capabilities
+## 0.6 capabilities
 
 - readable `.vn` scripting language
 - scene/title commands, backgrounds and characters
@@ -11,7 +11,9 @@ Python-first visual novel engine targeting Windows, macOS and Linux.
 - labels, jumps and variables
 - safe expression evaluation with `if / else / endif`
 - music, sounds, waits and transitions
-- save/load state with background, characters and history
+- character expressions plus `expression`, `move`, and `scale` commands
+- eased character position and scale tweening
+- save/load state with background, characters, expressions and history
 - Auto and Skip modes
 - resizable window and F11 fullscreen
 - pygame-ce runtime
@@ -20,7 +22,7 @@ Python-first visual novel engine targeting Windows, macOS and Linux.
 - visual Dialogue graph editor with nodes and links
 - dialogue graph JSON saved independently from the compiled script
 - graph-to-`.vn` compiler with validation of missing targets
-- pytest coverage for parser, expressions, scene data and dialogue graphs
+- pytest coverage for parser, expressions, scene data, dialogue graphs and animation tweening
 - PyInstaller build helper and GitHub Actions matrix
 
 ## Install
@@ -44,14 +46,17 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor has Script, Scene and Dialogue tabs. In Dialogue, add nodes, edit their properties, move nodes on the canvas, save `dialogue.json`, then compile the graph to `game.vn`.
+The editor has Script, Scene and Dialogue tabs. In Scene, place characters visually. In Dialogue, build the branching story graph, edit node properties, move nodes, save `dialogue.json`, then compile the graph to `game.vn`.
 
-## Script example
+## Animation script example
 
 ```text
 title "My First Novel"
 background "assets/room.png"
-character Alice "assets/alice.png" center
+character Alice "assets/alice.png" center happy
+move Alice left 0.45
+scale Alice 1.08 0.35
+expression Alice excited
 say Alice "Hello."
 set affection = 2
 set affection += 3

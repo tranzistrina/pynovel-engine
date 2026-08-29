@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.28.0
+
+- Added a QGraphics-based animation preview canvas.
+- Loaded project `scene.json` characters into the Animation Editor preview.
+- Applied timeline `x`, `y`, `scale`, `opacity`, and `rotation` values to preview sprites.
+- Connected the live canvas preview to playhead seek and playback.
+- Added graphical animation preview regression coverage.
+- Updated the main bilingual README for 0.28.0.
+
 ## 0.27.0
 
 - Added lightweight `AnimationPreview` model independent of Qt/Pygame.

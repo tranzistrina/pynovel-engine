@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.24.0
+
+- Added multi-track animation timeline model.
+- Added keyframes for target properties with configurable easing.
+- Added `linear`, `ease_in`, `ease_out`, `ease_in_out` and `smooth` easing.
+- Added timeline `play`, `pause`, `stop`, `seek`, looping and sampling.
+- Added JSON serialization and restoration for animation timelines.
+- Added Animation Editor with track/keyframe lists and playhead controls.
+- Added demo `examples/demo/animation.json`.
+- Added animation timeline regression tests.
+- Added Animation tab to the main editor.
+- Updated the main bilingual README for 0.24.0.
+
 ## 0.23.0
 
 - Added a shared asset drag-and-drop MIME payload format.

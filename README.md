@@ -4,43 +4,42 @@
 >
 > Кроссплатформенный движок и редактор визуальных новелл на Python для Windows, macOS и Linux.
 
-[Русский раздел ниже](#русский)
-
 ## English
 
-PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing, and a portable runtime.
+PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing and a portable runtime.
 
-### Current version: 0.13.0
+### Current version: 0.14.0
 
 ### Current capabilities
 
-- readable `.vn` scripting language
-- scenes, backgrounds and characters
-- dialogue and narration with typewriter effect
-- clickable and keyboard choices
-- labels, jumps, variables and safe expressions
-- `if / else / endif`
-- music, sound, waits and transitions
-- character expressions, movement and scaling with tweening
-- save/load with background, character state and history
-- in-game menu and five save slots
-- persistent player profile
-- title screen
-- Russian and English localization through JSON catalogs
-- configurable UI theme through `theme.json`
-- runtime UI widgets: Panel, Label, Image, TextBox and Button
-- percentage sizing, anchors and z-order
-- declarative `ui.json` project interfaces
-- clickable UI buttons with actions such as `new_game`, `menu`, `continue`, `quit`, and `jump:<label>`
-- visual UI Editor with widget tree, canvas and Inspector
-- UI Editor Undo/Redo, Duplicate and Delete
-- canvas drag-and-drop positioning
-- keyboard shortcuts for UI editing: Delete, Ctrl+D, Ctrl+Z, Ctrl+Y, Ctrl+S
-- visual Scene Editor
-- visual Dialogue Graph Editor
-- graph-to-`.vn` compiler
-- parser, expression, scene, graph, UI and animation tests
-- PyInstaller helper and GitHub Actions build matrix
+- readable `.vn` scripting language;
+- scenes, backgrounds and characters;
+- dialogue, narration and typewriter effect;
+- clickable and keyboard choices;
+- labels, jumps, variables and safe expressions;
+- `if / else / endif`;
+- music, sound, waits and transitions;
+- character expressions, movement and scaling with tweening;
+- save/load with background, character state and history;
+- five save slots and persistent player profile;
+- title screen and in-game menu;
+- Russian and English localization through JSON catalogs;
+- configurable UI theme through `theme.json`;
+- runtime UI widgets: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
+- anchors, percentage dimensions, visibility and `z` ordering;
+- declarative project UI in `ui.json`;
+- UI button actions such as `new_game`, `menu`, `continue`, `quit` and `jump:<label>`;
+- visual UI Editor with hierarchy, canvas and Inspector;
+- UI Editor undo/redo, duplicate and delete;
+- UI canvas drag-and-drop positioning;
+- resize handle on the selected UI widget;
+- alignment tools: Center X, Center Y, Center, Top and Left;
+- keyboard movement with arrows and Shift for larger steps;
+- keyboard shortcuts: Delete, Ctrl+D, Ctrl+Z, Ctrl+Y, Ctrl+S;
+- visual Scene Editor;
+- visual Dialogue Graph Editor;
+- graph-to-`.vn` compiler;
+- PyInstaller helper and GitHub Actions build matrix.
 
 ### Install
 
@@ -63,22 +62,25 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains Script, Scene, Dialogue and UI workflows. UI editing lets you create widgets, select them from the hierarchy or canvas, change their properties visually, duplicate/delete them, undo or redo changes, and save the result to `ui.json`.
+The editor contains Script, Scene, Dialogue and UI workflows.
 
-### Runtime controls
+### UI Editor
 
-- `Enter` / `Space`: continue
-- `1-9`: choose an option
-- `Esc`: open the in-game menu
-- `F5`: quick save slot 1
-- `F9`: quick load slot 1
-- `F7`: toggle skip mode
-- `F8`: toggle auto mode
-- `F11`: toggle fullscreen
+The UI tab provides a visual canvas for `ui.json`. Create a widget from the left panel, select it from the hierarchy or canvas, edit its properties in Inspector, then save.
 
-### UI layout
+Keyboard shortcuts:
 
-Project UI can be described as JSON and edited visually in the UI tab.
+- `Delete`: delete selected widget
+- `Ctrl+D`: duplicate
+- `Ctrl+Z`: undo
+- `Ctrl+Y`: redo
+- `Ctrl+S`: save
+- `Arrow keys`: move by 1 pixel
+- `Shift + Arrow`: move by 10 pixels
+
+The selected widget can be resized by dragging the lower-right handle and aligned with the Inspector tools.
+
+### UI example
 
 ```json
 {
@@ -102,31 +104,9 @@ Project UI can be described as JSON and edited visually in the UI tab.
 }
 ```
 
-Supported widgets: `panel`, `label`, `image`, `textbox`, `button`. Widgets support nesting, anchors, percentage dimensions, visibility and `z` ordering. Buttons expose declarative actions, keeping project files free of serialized Python callbacks.
-
-### UI editing shortcuts
-
-- `Delete`: remove the selected widget
-- `Ctrl+D`: duplicate the selected widget
-- `Ctrl+Z`: undo
-- `Ctrl+Y`: redo
-- `Ctrl+S`: save `ui.json`
-
 ### UI theme
 
-Put `theme.json` in the project root to customize UI colors:
-
-```json
-{
-  "background": [13, 16, 28],
-  "panel": [18, 22, 34],
-  "panel_border": [220, 220, 230],
-  "text": [245, 245, 250],
-  "muted_text": [165, 170, 185],
-  "accent": [55, 70, 102],
-  "accent_hover": [72, 88, 124]
-}
-```
+Put `theme.json` in the project root to customize UI colors.
 
 ### Localization
 
@@ -171,37 +151,38 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
 
-### Текущая версия: 0.13.0
+### Текущая версия: 0.14.0
 
 ### Возможности
 
-- человекочитаемый язык сценариев `.vn`
-- сцены, фоны и персонажи
-- диалоги и повествование с эффектом печати
-- выборы мышью и клавиатурой
-- `label`, `jump`, переменные и безопасные выражения
-- `if / else / endif`
-- музыка, звуки, ожидание и переходы
-- выражения персонажей, перемещение и масштабирование с tween-анимацией
-- сохранение и загрузка состояния
-- пять слотов сохранения
-- внутриигровое меню и Title Screen
-- постоянный профиль игрока
-- локализация интерфейса на русском и английском
-- настраиваемая тема через `theme.json`
-- UI-компоненты runtime: `Panel`, `Label`, `Image`, `TextBox`, `Button`
-- процентные размеры, anchors и `z`-порядок
-- интерфейсы проекта в `ui.json`
-- кликабельные UI-кнопки с actions `new_game`, `menu`, `continue`, `quit` и `jump:<label>`
-- визуальный UI Editor с деревом виджетов, canvas и Inspector
-- Undo/Redo, Duplicate и Delete в UI Editor
-- перемещение элементов непосредственно на canvas мышью
-- горячие клавиши `Delete`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+S`
-- визуальный Scene Editor
-- визуальный Dialogue Graph Editor
-- компиляция графа в `.vn`
-- тесты parser, expressions, сцен, графов, UI и анимаций
-- сборка через PyInstaller и GitHub Actions
+- человекочитаемый язык сценариев `.vn`;
+- сцены, фоны и персонажи;
+- диалоги, повествование и эффект печати;
+- выборы мышью и клавиатурой;
+- `label`, `jump`, переменные и безопасные выражения;
+- `if / else / endif`;
+- музыка, звуки, ожидание и переходы;
+- выражения персонажей, перемещение и масштабирование с tween-анимацией;
+- сохранение и загрузка состояния;
+- пять слотов сохранения и постоянный профиль игрока;
+- стартовый экран и внутриигровое меню;
+- локализация на русском и английском через JSON-каталоги;
+- настраиваемая тема через `theme.json`;
+- UI-компоненты runtime: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
+- anchors, процентные размеры, видимость и `z`-порядок;
+- декларативный интерфейс проекта в `ui.json`;
+- действия кнопок `new_game`, `menu`, `continue`, `quit` и `jump:<label>`;
+- визуальный UI Editor с деревом, canvas и Inspector;
+- Undo/Redo, Duplicate и Delete;
+- перемещение виджетов мышью на canvas;
+- resize handle у выбранного виджета;
+- инструменты выравнивания Center X, Center Y, Center, Top и Left;
+- перемещение стрелками с шагом 1 или 10 пикселей;
+- горячие клавиши `Delete`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+S`;
+- визуальный Scene Editor;
+- визуальный Dialogue Graph Editor;
+- компиляция графа в `.vn`;
+- сборка через PyInstaller и GitHub Actions.
 
 ### Установка
 
@@ -224,30 +205,25 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**. Во вкладке UI можно создавать компоненты, выбирать их в дереве или на canvas, менять свойства визуально, дублировать и удалять элементы, отменять и возвращать изменения и сохранять результат в `ui.json`.
+В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**.
 
-### Управление в игре
+### UI Editor
 
-- `Enter` / `Space`: продолжить
-- `1-9`: выбрать вариант
-- `Esc`: открыть меню
-- `F5`: быстрое сохранение в слот 1
-- `F9`: быстрая загрузка из слота 1
-- `F7`: пропуск текста
-- `F8`: автоматический режим
-- `F11`: полноэкранный режим
+Во вкладке UI можно визуально собирать `ui.json`: создавать виджеты, выбирать их в дереве или на canvas, менять свойства в Inspector и сохранять результат.
 
-### Горячие клавиши UI Editor
+Горячие клавиши:
 
-- `Delete`: удалить выбранный виджет
-- `Ctrl+D`: дублировать выбранный виджет
-- `Ctrl+Z`: отменить действие
-- `Ctrl+Y`: вернуть действие
-- `Ctrl+S`: сохранить `ui.json`
+- `Delete`: удалить выбранный виджет;
+- `Ctrl+D`: дублировать;
+- `Ctrl+Z`: отменить;
+- `Ctrl+Y`: вернуть;
+- `Ctrl+S`: сохранить;
+- `Стрелки`: перемещение на 1 пиксель;
+- `Shift + Стрелки`: перемещение на 10 пикселей.
 
-### UI-интерфейс
+Размер выбранного виджета можно менять перетаскиванием нижнего правого resize handle. В Inspector доступны инструменты выравнивания.
 
-Интерфейс можно описывать в JSON и редактировать визуально во вкладке UI.
+### Пример UI
 
 ```json
 {
@@ -271,11 +247,9 @@ pynovel-editor examples/demo
 }
 ```
 
-Поддерживаются `panel`, `label`, `image`, `textbox`, `button`. Компоненты можно вкладывать; доступны anchors, процентные размеры, видимость и порядок `z`.
-
 ### Тема интерфейса
 
-В корень проекта можно положить `theme.json` и изменить оформление UI без изменения кода движка.
+Положите `theme.json` в корень проекта, чтобы настраивать оформление без изменения кода движка.
 
 ### Локализация
 
@@ -292,12 +266,13 @@ python tools/build.py examples/demo --name MyNovel
 
 Нативные сборки создаются отдельно для Windows, macOS и Linux.
 
-### Статус проекта
-
-Проект находится в активной разработке. Архитектура разделена на editor, scripting, runtime, rendering, UI и project data, поэтому новые функции добавляются отдельными слоями.
-
 ### Документация
 
 - [English README](README.md)
 - [Полное русское README](README_RU.md)
 - [Заметки по упаковке](packaging/README.md)
+- [История изменений](CHANGELOG.md)
+
+### Статус проекта
+
+Проект находится в активной разработке. Архитектура разделена на editor, scripting, runtime, rendering, UI и project data, поэтому новые функции добавляются отдельными слоями без переписывания всего движка.

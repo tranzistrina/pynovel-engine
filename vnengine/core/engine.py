@@ -28,11 +28,12 @@ class Runtime:
         self.state.timeline_player = TimelinePlayer(self.asset_root)
         self._handlers: dict[str, Callable[[Action], None]] = {
             "background": self._background, "character": self._character, "expression": self._expression,
-            "move": self._move, "scale": self._scale, "play_animation": self._play_animation,
-            "stop_animation": self._stop_animation, "music": self._music, "music_stop": self._music_stop,
-            "sound": self._sound, "say": self._say, "set": self._set, "jump": self._jump, "if": self._if,
-            "else": self._else, "endif": self._endif, "choice": self._choice, "wait": self._wait,
-            "transition": self._transition, "end": self._end, "scene": lambda a: None,
+            "move": self._move, "scale": self._scale, "rotate": self._rotate,
+            "play_animation": self._play_animation, "stop_animation": self._stop_animation,
+            "music": self._music, "music_stop": self._music_stop, "sound": self._sound, "say": self._say,
+            "set": self._set, "jump": self._jump, "if": self._if, "else": self._else, "endif": self._endif,
+            "choice": self._choice, "wait": self._wait, "transition": self._transition, "end": self._end,
+            "scene": lambda a: None,
         }
     def asset(self, rel):
         p = Path(rel); return p if p.is_absolute() else self.asset_root / p
@@ -46,8 +47,7 @@ class Runtime:
                 "name": raw.get("name", "Character"), "image": raw.get("image", ""),
                 "position": raw.get("position", "center"), "expression": raw.get("expression", "neutral"),
                 "x": raw.get("x"), "y": raw.get("y", 100.0), "scale": raw.get("scale", 1.0),
-                "rotation": raw.get("rotation", 0.0),
-                "action": "show" if raw.get("visible", True) else "hide"
+                "rotation": raw.get("rotation", 0.0), "action": "show" if raw.get("visible", True) else "hide"
             }))
     def load_image(self, rel):
         if rel not in self._image_cache: self._image_cache[rel] = pygame.image.load(self.asset(rel)).convert_alpha()
@@ -77,6 +77,10 @@ class Runtime:
         char = self.state.characters.get(a.data["name"])
         if not char: return
         self.state.animations.setdefault(char.name, {})["scale"] = Tween(char.scale, float(a.data["scale"]), float(a.data.get("duration", .35)))
+    def _rotate(self, a):
+        char = self.state.characters.get(a.data["name"])
+        if not char: return
+        self.state.animations.setdefault(char.name, {})["rotation"] = Tween(char.rotation, float(a.data["rotation"]), float(a.data.get("duration", .35)))
     def _play_animation(self, a):
         if self.state.timeline_player: self.state.timeline_player.play(a.data["name"])
     def _stop_animation(self, a):

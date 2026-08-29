@@ -10,18 +10,20 @@ from vnengine.extensions.scenes import SceneStack
 from vnengine.extensions.scheduler import GameScheduler
 from vnengine.extensions.state import StateRegistry
 from vnengine.extensions.system import SystemRegistry
+from vnengine.extensions.input import InputMap
 from vnengine.map.movement import MovementController
 
 
 class ExtensibleRuntime(CoreRuntime):
     """Core Runtime with opt-in project extension primitives."""
 
-    ENGINE_VERSION = "0.33.0"
+    ENGINE_VERSION = "0.34.0"
 
     def __init__(self, story, asset_root):
         super().__init__(story, asset_root)
         self.event_bus = EventBus(); self.systems = SystemRegistry(); self.commands = CommandRegistry()
         self.scene_stack = SceneStack(self); self.game_state = StateRegistry(); self.scheduler = GameScheduler(); self.rng = DeterministicRNG(0)
+        self.input_map = InputMap(); self._input_handlers: dict[str, list[Any]] = {}
         self.movement = None
         self._register_builtin_extension_actions(); self.emit("project.startup", {"title": story.title})
 
@@ -42,6 +44,11 @@ class ExtensibleRuntime(CoreRuntime):
     def push_scene(self, scene, **kwargs) -> None: self.scene_stack.push(scene, **kwargs)
     def pop_scene(self): return self.scene_stack.pop()
     def replace_scene(self, scene, **kwargs) -> None: self.scene_stack.replace(scene, **kwargs)
+    def register_input_handler(self, action: str, handler) -> None: self._input_handlers.setdefault(action, []).append(handler)
+    def unregister_input_handler(self, action: str, handler) -> None:
+        handlers = self._input_handlers.get(action, [])
+        self._input_handlers[action] = [item for item in handlers if item is not handler]
+        if not self._input_handlers[action]: self._input_handlers.pop(action, None)
 
     def update(self, dt: float) -> None:
         super().update(dt)
@@ -52,7 +59,29 @@ class ExtensibleRuntime(CoreRuntime):
 
     def dispatch_input(self, event: object) -> bool:
         if self.scene_stack.handle_input(event): return True
-        return any(system.handle_event(event, self.game_state) for system in self.systems.values())
+        handled = False
+        for action in self._actions_for_event(event):
+            payload = {"action": action, "event": event}
+            self.emit("input.action", payload)
+            for handler in tuple(self._input_handlers.get(action, ())):
+                result = handler(event, self)
+                handled = bool(result) or handled
+        for system in self.systems.values():
+            handled = bool(system.handle_event(event, self.game_state)) or handled
+        return handled
+
+    def _actions_for_event(self, event: object) -> tuple[str, ...]:
+        event_type = getattr(event, "type", None)
+        if event_type is None: return ()
+        try:
+            import pygame
+            names = {pygame.KEYDOWN: "KEYDOWN", pygame.KEYUP: "KEYUP", pygame.MOUSEBUTTONDOWN: "MOUSEBUTTONDOWN", pygame.MOUSEBUTTONUP: "MOUSEBUTTONUP", pygame.MOUSEMOTION: "MOUSEMOTION"}
+        except ImportError:
+            names = {}
+        event_name = names.get(event_type, str(event_type))
+        code = getattr(event, "key", getattr(event, "button", ""))
+        modifiers = int(getattr(event, "mod", 0))
+        return self.input_map.actions_for(event_name, code, modifiers)
 
     def _register_builtin_extension_actions(self) -> None:
         self._extension_handlers = {"call_system": self._call_system, "emit": self._emit_action, "set_state": self._set_state, "open_scene": self._open_scene, "close_scene": self._close_scene}
@@ -76,7 +105,7 @@ class ExtensibleRuntime(CoreRuntime):
 
     def save_bundle(self, path, project_version: str = "1") -> None:
         bundle = SaveBundle(self.ENGINE_VERSION, project_version)
-        bundle.state = {"runtime": self.state.variables, "extensions": self.game_state.serialize(), "scheduler": self.scheduler.serialize()}
+        bundle.state = {"runtime": self.state.variables, "extensions": self.game_state.serialize(), "scheduler": self.scheduler.serialize(), "input_map": self.input_map.serialize()}
         bundle.extensions = {name: system.serialize() for name, system in self.systems.items() if hasattr(system, "serialize")}
         if self.movement is not None: bundle.extensions["__movement__"] = {k: _serialize_movement(v) for k, v in self.movement.active.items()}
         bundle.rng = self.rng.serialize(); bundle.save(path)
@@ -84,7 +113,7 @@ class ExtensibleRuntime(CoreRuntime):
     def load_bundle(self, path, project_version: str = "1") -> None:
         bundle = SaveBundle.load(path)
         if bundle.project_version != project_version: raise ValueError(f"project save version mismatch: {bundle.project_version} != {project_version}")
-        self.state.variables = dict(bundle.state.get("runtime", {})); self.game_state.deserialize(bundle.state.get("extensions", {}))
+        self.state.variables = dict(bundle.state.get("runtime", {})); self.game_state.deserialize(bundle.state.get("extensions", {})); self.input_map = InputMap.deserialize(bundle.state.get("input_map", []))
         for name, payload in bundle.extensions.items():
             if name == "__movement__":
                 if self.movement is not None: self.movement.restore(payload)

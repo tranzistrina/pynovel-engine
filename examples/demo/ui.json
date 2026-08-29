@@ -1,0 +1,36 @@
+{
+  "type": "panel",
+  "id": "hud",
+  "x": 0,
+  "y": 0,
+  "width": "100%",
+  "height": "100%",
+  "z": 100,
+  "background": [0, 0, 0],
+  "alpha": 0,
+  "children": [
+    {
+      "type": "label",
+      "id": "chapter",
+      "x": "50%",
+      "y": 24,
+      "width": 360,
+      "height": 48,
+      "anchor": "top-center",
+      "text": "PyNovel Demo",
+      "font_size": 30,
+      "align": "center",
+      "bold": true
+    },
+    {
+      "type": "button",
+      "id": "demo",
+      "x": "50%",
+      "y": 92%,
+      "width": 240,
+      "height": 52,
+      "anchor": "bottom-center",
+      "text": "UI Demo"
+    }
+  ]
+}

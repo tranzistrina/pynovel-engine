@@ -19,6 +19,7 @@ class UIWidget:
     anchor: str = 'top-left'
     z: int = 0
     visible: bool = True
+    enabled: bool = True
     children: list['UIWidget'] = field(default_factory=list)
     def rect(self, surface: pygame.Surface) -> pygame.Rect:
         sw, sh = surface.get_size(); w, h = _resolve(self.width, sw), _resolve(self.height, sh); x, y = _resolve(self.x, sw), _resolve(self.y, sh)
@@ -90,7 +91,7 @@ class Button(UIWidget):
     def draw(self, surface: pygame.Surface, theme: Theme) -> None:
         if not self.visible: return
         rect=self.rect(surface); bg=self.hover_background if self.hovered and self.hover_background else self.background; bg=bg or (theme.accent_hover if self.hovered else theme.accent); pygame.draw.rect(surface,tuple(bg),rect,border_radius=self.radius); font=pygame.font.Font(None,self.font_size); text=font.render(self.text,True,tuple(self.color or theme.text)); surface.blit(text,text.get_rect(center=rect.center))
-    def update_hover(self,pos:tuple[int,int],surface:pygame.Surface)->None: self.hovered=self.visible and self.rect(surface).collidepoint(pos)
+    def update_hover(self,pos:tuple[int,int],surface:pygame.Surface)->None: self.hovered=self.visible and self.enabled and self.rect(surface).collidepoint(pos)
 
 WIDGET_TYPES={'panel':Panel,'label':Label,'image':Image,'textbox':TextBox,'button':Button}
 

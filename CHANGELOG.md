@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.22.0
+
+- Added the Asset Browser to the main PyNovel Editor.
+- Added project asset search and type filtering.
+- Added image preview and text/data preview.
+- Added asset metadata display and clipboard path copy.
+- Added automatic asset index refresh from the browser.
+- Fixed Qt clipboard access in the Asset Browser.
+- Added Asset Catalog regression tests.
+- Updated the project version to 0.22.0.
+
 ## 0.21.0
 
 - Added project asset catalog and common resource classification.

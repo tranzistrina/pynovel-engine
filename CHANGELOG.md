@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.0
+
+- Added reusable group bounding-box and proportional group scaling geometry.
+- Added rectangle intersection helpers for marquee selection workflows.
+- Added editor transform regression tests for group scaling and bounds.
+- Updated the main bilingual README for 0.20.0.
+
 ## 0.19.0
 
 - Added reusable group transform helpers for editor tooling.

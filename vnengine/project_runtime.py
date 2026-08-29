@@ -40,6 +40,16 @@ class ProjectRuntime:
         self.scene = self.stack.current; self.world = getattr(self.scene, "world", self.scene); self._call(self.scene, "resume")
         self.emit("scene.popped", {"scene": self.scene_id}); return self.scene
 
+    def handle_input(self, event: Any) -> bool:
+        if not self.running or self.scene is None: return False
+        handler = getattr(self.scene, "handle_input", None)
+        return bool(handler(event)) if callable(handler) else False
+
+    def render(self, target: Any) -> None:
+        if self.scene is None: return
+        renderer = getattr(self.scene, "render", None)
+        if callable(renderer): renderer(target)
+
     def update(self, dt: float) -> None:
         if not self.running or self.scene is None: return
         self.transitions.update(dt); update = getattr(self.scene, "update", None)

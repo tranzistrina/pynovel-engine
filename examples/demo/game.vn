@@ -1,16 +1,15 @@
 title "PyNovel Animation Demo"
 character Alice "assets/alice.png" center happy
-move Alice left 0.45
-scale Alice 1.08 0.35
-say Alice "Теперь я умею двигаться и менять масштаб."
+play_animation AliceEnter
+say Alice "Теперь у меня есть настоящая timeline-анимация."
 expression Alice excited
 set affection = 5
 if affection >= 5
-say Narrator "А ещё у нас есть условные ветки."
+say Narrator "Анимации теперь запускаются прямо из сценария."
 endif
 choice
 "Продолжить": ending
 "Закончить": ending
 label ending
-say Narrator "Конец демо 0.6.0."
+say Narrator "Конец демо 0.25.0."
 end

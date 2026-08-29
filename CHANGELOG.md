@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.0
+
+- Added a reusable UI hierarchy model for editor-side project data.
+- Added safe reparenting between `Panel` containers.
+- Added cycle prevention when reparenting hierarchy nodes.
+- Added cloning helpers with unique IDs.
+- Added group translation and sequential z-order helpers.
+- Added regression tests for hierarchy operations.
+- Updated the main bilingual README for 0.15.0.
+
 ## 0.14.0
 
 - Added UI resize handle for the selected widget in the visual UI Editor.

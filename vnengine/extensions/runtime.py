@@ -6,6 +6,7 @@ from vnengine.core.rng import DeterministicRNG
 from vnengine.core.save_bundle import SaveBundle
 from vnengine.extensions.commands import CommandRegistry
 from vnengine.extensions.events import EventBus
+from vnengine.extensions.notifications import Notification, NotificationLog
 from vnengine.extensions.scenes import SceneStack
 from vnengine.extensions.scheduler import GameScheduler
 from vnengine.extensions.state import StateRegistry
@@ -17,12 +18,13 @@ from vnengine.map.movement import MovementController
 class ExtensibleRuntime(CoreRuntime):
     """Core Runtime with opt-in project extension primitives."""
 
-    ENGINE_VERSION = "0.37.0"
+    ENGINE_VERSION = "0.38.0"
 
     def __init__(self, story, asset_root):
         super().__init__(story, asset_root)
         self.event_bus = EventBus(); self.systems = SystemRegistry(); self.commands = CommandRegistry()
         self.scene_stack = SceneStack(self); self.game_state = StateRegistry(); self.scheduler = GameScheduler(); self.rng = DeterministicRNG(0)
+        self.notifications = NotificationLog()
         self.input_map = InputMap(); self._input_handlers: dict[str, list[Any]] = {}
         self.movement = None
         self._register_builtin_extension_actions(); self.emit("project.startup", {"title": story.title})
@@ -39,6 +41,15 @@ class ExtensibleRuntime(CoreRuntime):
     def subscribe(self, event_name: str, callback, priority: int = 0): return self.event_bus.subscribe(event_name, callback, priority)
     def unsubscribe(self, subscription) -> None: self.event_bus.unsubscribe(subscription)
     def emit(self, event_name: str, data: dict[str, Any] | None = None) -> bool: return self.event_bus.emit(event_name, data)
+    def notify(self, title: str, body: str = "", *, severity: str = "info", icon: str | None = None, timestamp: int | None = None, action: str | None = None, notification_id: str | None = None) -> Notification:
+        """Create a presentation notification and emit its creation event."""
+        item = self.notifications.add(title, body, severity=severity, icon=icon, timestamp=self.scheduler.tick if timestamp is None else timestamp, action=action, notification_id=notification_id)
+        self.emit("notification.created", item.serialize())
+        return item
+    def mark_notification_read(self, notification_id: str) -> bool:
+        changed = self.notifications.mark_read(notification_id)
+        if changed: self.emit("notification.read", {"id": notification_id})
+        return changed
     def register_state_namespace(self, name: str, initial=None, version: int = 1) -> None: self.game_state.register(name, initial, version)
     def get_state(self, path: str, default=None): return self.game_state.get(path, default)
     def set_state(self, path: str, value) -> None: self.game_state.set(path, value)
@@ -106,7 +117,7 @@ class ExtensibleRuntime(CoreRuntime):
 
     def save_bundle(self, path, project_version: str = "1") -> None:
         bundle = SaveBundle(self.ENGINE_VERSION, project_version)
-        bundle.state = {"runtime": self.state.variables, "extensions": self.game_state.serialize(), "scheduler": self.scheduler.serialize(), "input_map": self.input_map.serialize()}
+        bundle.state = {"runtime": self.state.variables, "extensions": self.game_state.serialize(), "scheduler": self.scheduler.serialize(), "notifications": self.notifications.serialize(), "input_map": self.input_map.serialize()}
         bundle.extensions = {name: system.serialize() for name, system in self.systems.items() if hasattr(system, "serialize")}
         if self.movement is not None: bundle.extensions["__movement__"] = {k: _serialize_movement(v) for k, v in self.movement.active.items()}
         bundle.rng = self.rng.serialize(); bundle.save(path)
@@ -114,7 +125,7 @@ class ExtensibleRuntime(CoreRuntime):
     def load_bundle(self, path, project_version: str = "1") -> None:
         bundle = SaveBundle.load(path)
         if bundle.project_version != project_version: raise ValueError(f"project save version mismatch: {bundle.project_version} != {project_version}")
-        self.state.variables = dict(bundle.state.get("runtime", {})); self.game_state.deserialize(bundle.state.get("extensions", {})); self.input_map = InputMap.deserialize(bundle.state.get("input_map", []))
+        self.state.variables = dict(bundle.state.get("runtime", {})); self.game_state.deserialize(bundle.state.get("extensions", {})); self.notifications.deserialize(bundle.state.get("notifications", {})); self.input_map = InputMap.deserialize(bundle.state.get("input_map", []))
         for name, payload in bundle.extensions.items():
             if name == "__movement__":
                 if self.movement is not None: self.movement.restore(payload)

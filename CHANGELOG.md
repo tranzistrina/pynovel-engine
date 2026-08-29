@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.0
+
+- Added character `rotation` to the shared runtime model.
+- Added rotation persistence to save/load state.
+- Added timeline support for animated `rotation` values.
+- Added runtime rendering of rotated character sprites.
+- Added direct `.vn` `rotate <character> <degrees> <duration>` tween command.
+- Added regression tests for the rotate parser command and zero-rotation default.
+- Updated the main bilingual README for 0.26.0.
+
 ## 0.25.0
 
 - Connected animation timelines to the runtime.

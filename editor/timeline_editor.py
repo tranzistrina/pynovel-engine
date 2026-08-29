@@ -3,25 +3,30 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
     QPushButton, QDoubleSpinBox, QLineEdit, QLabel, QSlider, QFormLayout,
-    QGroupBox, QMessageBox
+    QGroupBox, QMessageBox, QTextEdit
 )
 
 from vnengine.animation.timeline import Timeline, Keyframe
+from vnengine.animation.preview import AnimationPreview, PreviewState
 
 
 class TimelineEditor(QWidget):
-    """Small timeline editor for animation.json project timelines."""
+    """Timeline editor with live lightweight transform preview."""
 
     def __init__(self, project: str | Path):
         super().__init__()
         self.project = Path(project)
         self.path = self.project / "animation.json"
         self.timeline = Timeline("Main")
+        self.preview_model = AnimationPreview()
         self._building = False
+        self._playing_timer = QTimer(self)
+        self._playing_timer.setInterval(16)
+        self._playing_timer.timeout.connect(self._tick_preview)
         self._build_ui()
         self.load_file()
 
@@ -68,6 +73,18 @@ class TimelineEditor(QWidget):
         root.addLayout(center, 4)
 
         right = QVBoxLayout()
+        preview_box = QGroupBox("Live Preview")
+        preview_layout = QVBoxLayout(preview_box)
+        self.preview_label = QLabel("No preview target")
+        self.preview_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.preview_label.setMinimumHeight(180)
+        preview_layout.addWidget(self.preview_label)
+        self.preview_details = QTextEdit()
+        self.preview_details.setReadOnly(True)
+        self.preview_details.setMaximumHeight(170)
+        preview_layout.addWidget(self.preview_details)
+        right.addWidget(preview_box)
+
         box = QGroupBox("Keyframe")
         form = QFormLayout(box)
         self.target = QLineEdit()
@@ -97,7 +114,31 @@ class TimelineEditor(QWidget):
             except (OSError, ValueError, TypeError) as exc:
                 QMessageBox.warning(self, "Animation", f"Unable to read animation.json: {exc}")
         self.name.setText(self.timeline.name)
+        self._sync_preview_targets()
         self.rebuild()
+
+    def _sync_preview_targets(self) -> None:
+        targets = sorted({track.target for track in self.timeline.tracks if track.target})
+        for target in targets:
+            self.preview_model.ensure_target(target)
+
+    def _update_preview(self) -> None:
+        self.preview_model.seek(self.timeline, self.timeline.time)
+        targets = sorted(self.preview_model.targets)
+        if not targets:
+            self.preview_label.setText("No preview target")
+            self.preview_details.clear()
+            return
+        lines = []
+        for name in targets:
+            state = self.preview_model.targets[name]
+            lines.append(
+                f"{name}:  X {state.x:.2f}%   Y {state.y:.2f}%   "
+                f"Scale {state.scale:.3f}   Opacity {state.opacity:.3f}   "
+                f"Rotation {state.rotation:.2f}°"
+            )
+        self.preview_label.setText(f"Playhead: {self.timeline.time:.3f}s")
+        self.preview_details.setPlainText("\n".join(lines))
 
     def rebuild(self) -> None:
         self._building = True
@@ -111,6 +152,7 @@ class TimelineEditor(QWidget):
             self.timeline_slider.setValue(int(self.timeline.time / duration * 1000))
             self.playhead.setValue(self.timeline.time)
             self.rebuild_keys()
+            self._update_preview()
         finally:
             self._building = False
 
@@ -150,6 +192,7 @@ class TimelineEditor(QWidget):
         prop = self.property.text().strip() or "x"
         if not any(t.target == target and t.property == prop for t in self.timeline.tracks):
             self.timeline.tracks.append(__import__("vnengine.animation.timeline", fromlist=["Track"]).Track(target, prop))
+            self._sync_preview_targets()
         self.rebuild()
 
     def add_key(self) -> None:
@@ -157,6 +200,7 @@ class TimelineEditor(QWidget):
             self.timeline.add_keyframe(self.target.text().strip(), self.property.text().strip(), self.time.value(), self.value.value(), self.easing.text().strip() or "linear")
         except ValueError as exc:
             QMessageBox.warning(self, "Keyframe", str(exc)); return
+        self._sync_preview_targets()
         self.rebuild()
 
     def remove_key(self) -> None:
@@ -170,16 +214,30 @@ class TimelineEditor(QWidget):
 
     def seek(self, value: float) -> None:
         if self._building: return
-        self.timeline.seek(value); self.rebuild()
+        self.timeline.seek(value); self._update_preview(); self.rebuild()
 
     def slider_seek(self, value: int) -> None:
         if self._building: return
         self.timeline.seek(self.timeline.duration * value / 1000.0 if self.timeline.duration else 0.0)
         self.playhead.blockSignals(True); self.playhead.setValue(self.timeline.time); self.playhead.blockSignals(False)
+        self._update_preview()
 
-    def play(self) -> None: self.timeline.play()
-    def pause(self) -> None: self.timeline.pause()
-    def stop(self) -> None: self.timeline.stop(); self.rebuild()
+    def play(self) -> None:
+        self.timeline.play(); self._playing_timer.start()
+
+    def pause(self) -> None:
+        self.timeline.pause(); self._playing_timer.stop()
+
+    def stop(self) -> None:
+        self.timeline.stop(); self._playing_timer.stop(); self.rebuild()
+
+    def _tick_preview(self) -> None:
+        self.timeline.update(0.016)
+        self._update_preview()
+        if not self.timeline.playing:
+            self._playing_timer.stop()
+        else:
+            self.playhead.blockSignals(True); self.playhead.setValue(self.timeline.time); self.playhead.blockSignals(False)
 
     def save_file(self) -> None:
         self.timeline.name = self.name.text().strip() or "Main"

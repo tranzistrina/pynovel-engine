@@ -6,9 +6,8 @@ from vnengine.assets.catalog import AssetCatalog, AssetType
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QComboBox,
-    QListWidget, QListWidgetItem, QLabel, QPushButton, QFileDialog,
-    QMessageBox, QPlainTextEdit
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QComboBox,
+    QListWidget, QListWidgetItem, QLabel, QPushButton, QPlainTextEdit
 )
 
 
@@ -96,7 +95,7 @@ class AssetBrowser(QWidget):
             if not pixmap.isNull():
                 self.preview.setPixmap(pixmap.scaled(520, 520, Qt.KeepAspectRatio, Qt.SmoothTransformation))
                 return
-        if entry.asset_type == AssetType.SCRIPT or entry.asset_type == AssetType.DATA:
+        if entry.asset_type in {AssetType.SCRIPT, AssetType.DATA}:
             try:
                 text = absolute.read_text(encoding="utf-8")
                 self.preview.setText(text[:5000])
@@ -110,4 +109,4 @@ class AssetBrowser(QWidget):
         if not items:
             return
         path = items[0].data(Qt.UserRole)
-        self.window().clipboard().setText(path)
+        QApplication.clipboard().setText(path)

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.36.0
+
+- Routed generic VN extension actions through the public `CommandRegistry` so external projects can register new script commands without modifying the engine action loop.
+- Added `command_names()` for introspection of registered project commands.
+- Preserved built-in extension commands as engine-owned behavior while allowing arbitrary project-defined commands.
+- Added regression coverage proving a registered command executes from a parsed-style action and cannot override built-in extension commands.
+- Kept `inhRPG` gameplay rules outside the engine and exposed the capability through reusable public APIs.
+
 ## 0.35.0
 
 - Added dynamic UI `enabled` state to reusable widgets.

@@ -37,6 +37,16 @@ class VNParser:
                     labels[parts[1]] = len(actions)
                 elif cmd == "scene" and len(parts) >= 2:
                     actions.append(Action("scene", {"name": " ".join(parts[1:])}))
+                elif cmd == "open_scene" and len(parts) >= 2:
+                    actions.append(Action("open_scene", {"name": " ".join(parts[1:])}))
+                elif cmd == "close_scene" and len(parts) >= 2:
+                    actions.append(Action("close_scene", {"name": " ".join(parts[1:])}))
+                elif cmd == "call_system" and len(parts) >= 3:
+                    actions.append(Action("call_system", {"system": parts[1], "method": parts[2], "args": parts[3:]}))
+                elif cmd == "emit" and len(parts) >= 2:
+                    actions.append(Action("emit", {"event": parts[1], "args": parts[2:]}))
+                elif cmd == "set_state" and len(parts) >= 3:
+                    actions.append(Action("set_state", {"path": parts[1], "expression": " ".join(parts[2:])}))
                 elif cmd == "background" and len(parts) == 2:
                     actions.append(Action("background", {"path": parts[1]}))
                 elif cmd == "character" and len(parts) >= 3:

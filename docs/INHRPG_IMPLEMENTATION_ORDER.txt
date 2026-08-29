@@ -1,0 +1,65 @@
+inhRPG implementation order
+
+1. Engine infrastructure
+   - GameSystem API
+   - structured state registry
+   - event bus
+   - scene stack
+   - input action map
+   - versioned saves
+   - dynamic UI binding
+   - deterministic RNG
+
+2. Vertical slice
+   - title screen
+   - prologue VN
+   - strategy map
+   - one campaign event
+   - one army
+   - one movement action
+   - one battle
+   - return to VN
+   - save/load
+
+3. Strategy layer
+   - campaign clock
+   - map nodes/edges
+   - army entities
+   - manpower/supply/ammunition/morale
+   - route and supply calculation
+   - faction relations
+   - notifications
+
+4. Narrative layer
+   - story flags
+   - relationship system
+   - murder investigation
+   - campaign event chains
+   - dynamic dialogue conditions
+
+5. Combat
+   - battle scene host
+   - game-owned battle resolver
+   - battle aftermath
+   - persistent casualties/morale/supply effects
+
+6. Mini-games
+   - code lock
+   - vox/radio routing
+   - supply routing
+   - artillery adjustment
+   - reconnaissance/search
+   - repair
+
+7. Full campaign
+   - all acts
+   - all strategic decisions
+   - all major events
+   - all endings
+   - localization
+
+8. Polish
+   - editor support
+   - accessibility
+   - performance
+   - packaging

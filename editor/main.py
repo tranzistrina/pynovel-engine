@@ -1,36 +1,58 @@
 from __future__ import annotations
 import sys
 from pathlib import Path
-from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QHBoxLayout,QVBoxLayout,QListWidget,QTextEdit,QLabel,QPushButton,QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QPixmap
+from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QHBoxLayout,QVBoxLayout,QTreeWidget,QTreeWidgetItem,QPlainTextEdit,QLabel,QPushButton,QMessageBox,QFileDialog,QSplitter,QStatusBar
 from vnengine.script.parser import VNParser, VNParseError
+
+ASSET_EXTS={'.png','.jpg','.jpeg','.webp','.wav','.ogg','.mp3','.mp4','.json','.vn'}
 
 class Editor(QMainWindow):
     def __init__(self,project:str|Path):
-        super().__init__(); self.project=Path(project); self.setWindowTitle('PyNovel Editor 0.2'); self.resize(1280,760)
-        central=QWidget(); self.setCentralWidget(central); root=QHBoxLayout(central)
-        self.files=QListWidget(); self.preview=QTextEdit(); self.preview.setReadOnly(True); self.stats=QLabel()
-        root.addWidget(self.files,1); mid=QVBoxLayout(); mid.addWidget(QLabel('Scenario / Asset Preview')); mid.addWidget(self.preview,1); root.addLayout(mid,4)
-        side=QVBoxLayout(); side.addWidget(self.stats); run=QPushButton('Run game'); run.clicked.connect(self.run_game); side.addWidget(run); validate=QPushButton('Validate script'); validate.clicked.connect(self.validate); side.addWidget(validate); side.addStretch(); root.addLayout(side,1)
-        self.files.currentTextChanged.connect(self.open_file); self.reload()
+        super().__init__(); self.project=Path(project); self.current:Path|None=None; self.setWindowTitle(f'PyNovel Editor 0.3 — {self.project.name}'); self.resize(1400,820); self.status=QStatusBar(); self.setStatusBar(self.status)
+        central=QWidget(); self.setCentralWidget(central); root=QVBoxLayout(central); toolbar=QHBoxLayout(); root.addLayout(toolbar)
+        for label,slot in [('Save',self.save_file),('Validate',self.validate),('Run',self.run_game),('Open folder',self.open_folder)]:
+            b=QPushButton(label); b.clicked.connect(slot); toolbar.addWidget(b)
+        toolbar.addStretch(); body=QSplitter(Qt.Horizontal); root.addWidget(body,1)
+        self.tree=QTreeWidget(); self.tree.setHeaderLabel('Project'); self.tree.itemClicked.connect(self.select_item); body.addWidget(self.tree)
+        self.editor=QPlainTextEdit(); self.editor.setLineWrapMode(QPlainTextEdit.NoWrap); body.addWidget(self.editor)
+        self.preview=QLabel('Asset preview / scenario stats'); self.preview.setAlignment(Qt.AlignCenter); self.preview.setWordWrap(True); body.addWidget(self.preview); body.setSizes([280,720,360]); self.reload()
+        file_menu=self.menuBar().addMenu('File'); save=QAction('Save',self); save.triggered.connect(self.save_file); file_menu.addAction(save); quit_action=QAction('Quit',self); quit_action.triggered.connect(self.close); file_menu.addAction(quit_action)
     def reload(self):
-        self.files.clear()
-        for p in sorted(self.project.rglob('*')):
-            if p.is_file() and p.suffix.lower() in {'.vn','.json','.png','.jpg','.jpeg','.wav','.ogg','.mp3','.mp4'}:self.files.addItem(str(p.relative_to(self.project)))
+        self.tree.clear(); self._add_path(self.tree.invisibleRootItem(),self.project); self.status.showMessage('Project loaded')
+    def _add_path(self,parent,path):
+        if not path.exists():return
+        for p in sorted(path.iterdir(),key=lambda x:(x.is_file(),x.name.lower())):
+            if p.name.startswith('.') or (p.is_file() and p.suffix.lower() not in ASSET_EXTS):continue
+            item=QTreeWidgetItem([p.name]); item.setData(0,Qt.UserRole,str(p)); parent.addChild(item)
+            if p.is_dir():self._add_path(item,p)
+    def select_item(self,item,_column):
+        p=Path(item.data(0,Qt.UserRole)); self.current=p
+        if p.is_file() and p.suffix.lower() in {'.vn','.json'}:
+            self.editor.setPlainText(p.read_text(encoding='utf-8')); self._stats(); self.preview.setText('Text asset')
+        elif p.suffix.lower() in {'.png','.jpg','.jpeg','.webp'}:
+            self.editor.clear(); pix=QPixmap(str(p)); self.preview.setPixmap(pix.scaled(420,700,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+        else:self.editor.clear(); self.preview.setText(str(p.relative_to(self.project)))
+    def _stats(self):
         try:
-            story=VNParser().parse_file(self.project/'game.vn'); self.stats.setText(f'Actions: {len(story.actions)}\nLabels: {len(story.labels)}')
-        except Exception as exc:self.stats.setText(f'Parser error:\n{exc}')
-    def open_file(self,rel):
-        if not rel:return
-        try:self.preview.setPlainText((self.project/rel).read_text(encoding='utf-8'))
-        except Exception:self.preview.setPlainText(f'{rel}\n\n(binary asset)')
+            story=VNParser().parse(self.editor.toPlainText(),title=self.project.name); self.preview.setText(f'Actions: {len(story.actions)}\nLabels: {len(story.labels)}\n\nScript valid')
+        except Exception as exc:self.preview.setText(f'Parser error\n{exc}')
+    def save_file(self):
+        if not self.current or not self.current.is_file() or self.current.suffix.lower() not in {'.vn','.json'}:return
+        self.current.write_text(self.editor.toPlainText(),encoding='utf-8'); self._stats(); self.status.showMessage(f'Saved {self.current.name}')
     def validate(self):
-        try:s=VNParser().parse_file(self.project/'game.vn'); QMessageBox.information(self,'Valid',f'Valid script. {len(s.actions)} actions, {len(s.labels)} labels.')
+        try:
+            story=VNParser().parse_file(self.project/'game.vn'); QMessageBox.information(self,'Valid script',f'{len(story.actions)} actions\n{len(story.labels)} labels')
         except VNParseError as exc:QMessageBox.critical(self,'Invalid script',str(exc))
     def run_game(self):
-        from vnengine.runtime import Game
-        self.hide()
+        self.save_file(); from vnengine.runtime import Game; self.hide()
         try:Game(self.project).run()
+        except Exception as exc:QMessageBox.critical(self,'Runtime error',str(exc))
         finally:self.show()
+    def open_folder(self):
+        path=QFileDialog.getExistingDirectory(self,'Choose project',str(self.project.parent))
+        if path:self.project=Path(path); self.current=None; self.reload(); self.setWindowTitle(f'PyNovel Editor 0.3 — {self.project.name}')
 
 def main():
     project=sys.argv[1] if len(sys.argv)>1 else 'examples/demo'; app=QApplication(sys.argv); win=Editor(project); win.show(); sys.exit(app.exec())

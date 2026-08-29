@@ -9,18 +9,26 @@ class ProjectRunner:
         self.runtime = runtime; self.poll_events = poll_events or (lambda: ()); self.present = present or (lambda _: None)
         self.target = target; self.clock = clock; self.running = False
 
+    @staticmethod
+    def _is_quit(event: Any) -> bool:
+        if getattr(event, "quit", False): return True
+        event_type = getattr(event, "type", None)
+        return event_type == "QUIT" or getattr(event_type, "name", None) == "QUIT"
+
     def step(self, dt: float) -> None:
         for event in self.poll_events():
-            if getattr(event, "quit", False): self.running = False; continue
+            if self._is_quit(event):
+                self.running = False
+                continue
             self.runtime.handle_input(event)
-        self.runtime.update(dt); self.runtime.render(self.target); self.present(self.target)
+        self.runtime.update(max(0.0, float(dt))); self.runtime.render(self.target); self.present(self.target)
 
     def run(self, *, max_frames: int | None = None) -> None:
         self.runtime.start(); self.running = True; frames = 0
         try:
             while self.running:
                 dt = float(self.clock()) if self.clock is not None else 0.0
-                self.step(max(0.0, dt)); frames += 1
+                self.step(dt); frames += 1
                 if max_frames is not None and frames >= max_frames: self.running = False
         finally:
             self.runtime.stop()

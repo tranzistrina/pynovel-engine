@@ -1,28 +1,16 @@
-# PyNovel MVP demo
-scene intro
-
-label start
-say Narrator "Добро пожаловать в PyNovel Engine."
-set visited = true
-choice
-  "Начать историю": start_story
-  "Сразу к финалу": ending
-
-label start_story
-say Alice "Привет! Я первый персонаж нашей демо-игры."
+title "PyNovel Animation Demo"
+character Alice "assets/alice.png" center happy
+move Alice left 0.45
+scale Alice 1.08 0.35
+say Alice "Теперь я умею двигаться и менять масштаб."
+expression Alice excited
 set affection = 5
+if affection >= 5
+say Narrator "А ещё у нас есть условные ветки."
+endif
 choice
-  "Остаться": stay
-  "Уйти": leave
-
-label stay
-say Alice "Тогда продолжим. У тебя affection = 5."
-jump ending
-
-label leave
-say Alice "Жаль. Но сценарий продолжит работать."
-jump ending
-
+"Продолжить": ending
+"Закончить": ending
 label ending
-say Narrator "Конец демо. F5 сохраняет игру, F9 загружает сохранение."
+say Narrator "Конец демо 0.6.0."
 end

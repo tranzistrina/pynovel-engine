@@ -10,7 +10,7 @@
 
 PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing, and a portable runtime.
 
-### Current version: 0.12.0
+### Current version: 0.13.0
 
 ### Current capabilities
 
@@ -33,10 +33,13 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - declarative `ui.json` project interfaces
 - clickable UI buttons with actions such as `new_game`, `menu`, `continue`, `quit`, and `jump:<label>`
 - visual UI Editor with widget tree, canvas and Inspector
+- UI Editor Undo/Redo, Duplicate and Delete
+- canvas drag-and-drop positioning
+- keyboard shortcuts for UI editing: Delete, Ctrl+D, Ctrl+Z, Ctrl+Y, Ctrl+S
 - visual Scene Editor
 - visual Dialogue Graph Editor
 - graph-to-`.vn` compiler
-- parser, expression, scene, graph, UI, profile and animation tests
+- parser, expression, scene, graph, UI and animation tests
 - PyInstaller helper and GitHub Actions build matrix
 
 ### Install
@@ -60,7 +63,7 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains Script, Scene, Dialogue and UI workflows. UI editing lets you create widgets, change their properties visually, and save the result to `ui.json`.
+The editor contains Script, Scene, Dialogue and UI workflows. UI editing lets you create widgets, select them from the hierarchy or canvas, change their properties visually, duplicate/delete them, undo or redo changes, and save the result to `ui.json`.
 
 ### Runtime controls
 
@@ -99,7 +102,15 @@ Project UI can be described as JSON and edited visually in the UI tab.
 }
 ```
 
-Supported widgets: `panel`, `label`, `image`, `textbox`, `button`. Widgets support nesting, anchors, percentage dimensions, visibility and `z` ordering.
+Supported widgets: `panel`, `label`, `image`, `textbox`, `button`. Widgets support nesting, anchors, percentage dimensions, visibility and `z` ordering. Buttons expose declarative actions, keeping project files free of serialized Python callbacks.
+
+### UI editing shortcuts
+
+- `Delete`: remove the selected widget
+- `Ctrl+D`: duplicate the selected widget
+- `Ctrl+Z`: undo
+- `Ctrl+Y`: redo
+- `Ctrl+S`: save `ui.json`
 
 ### UI theme
 
@@ -160,7 +171,7 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
 
-### Текущая версия: 0.12.0
+### Текущая версия: 0.13.0
 
 ### Возможности
 
@@ -183,10 +194,13 @@ PyNovel Engine — кроссплатформенный движок и реда
 - интерфейсы проекта в `ui.json`
 - кликабельные UI-кнопки с actions `new_game`, `menu`, `continue`, `quit` и `jump:<label>`
 - визуальный UI Editor с деревом виджетов, canvas и Inspector
+- Undo/Redo, Duplicate и Delete в UI Editor
+- перемещение элементов непосредственно на canvas мышью
+- горячие клавиши `Delete`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+S`
 - визуальный Scene Editor
 - визуальный Dialogue Graph Editor
 - компиляция графа в `.vn`
-- тесты parser, expressions, сцен, графов, UI, профиля и анимаций
+- тесты parser, expressions, сцен, графов, UI и анимаций
 - сборка через PyInstaller и GitHub Actions
 
 ### Установка
@@ -210,7 +224,7 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**. В UI можно создавать компоненты, менять их свойства визуально и сохранять результат в `ui.json`.
+В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**. Во вкладке UI можно создавать компоненты, выбирать их в дереве или на canvas, менять свойства визуально, дублировать и удалять элементы, отменять и возвращать изменения и сохранять результат в `ui.json`.
 
 ### Управление в игре
 
@@ -222,6 +236,14 @@ pynovel-editor examples/demo
 - `F7`: пропуск текста
 - `F8`: автоматический режим
 - `F11`: полноэкранный режим
+
+### Горячие клавиши UI Editor
+
+- `Delete`: удалить выбранный виджет
+- `Ctrl+D`: дублировать выбранный виджет
+- `Ctrl+Z`: отменить действие
+- `Ctrl+Y`: вернуть действие
+- `Ctrl+S`: сохранить `ui.json`
 
 ### UI-интерфейс
 

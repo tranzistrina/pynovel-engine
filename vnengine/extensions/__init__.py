@@ -1,11 +1,13 @@
 """Optional extension APIs for project-specific gameplay systems."""
 
+from .commands import CommandContext, CommandRegistry
 from .events import Event, EventBus, EventSubscription
 from .scenes import Scene, SceneEntry, SceneStack
 from .state import StateNamespace, StateRegistry
 from .system import GameSystem, SystemEvent, SystemRegistry
 
 __all__ = [
+    "CommandContext", "CommandRegistry",
     "Event", "EventBus", "EventSubscription",
     "Scene", "SceneEntry", "SceneStack",
     "StateNamespace", "StateRegistry",

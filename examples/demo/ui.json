@@ -24,13 +24,14 @@
     },
     {
       "type": "button",
-      "id": "demo",
+      "id": "menu_button",
+      "action": "menu",
       "x": "50%",
       "y": "92%",
       "width": 240,
       "height": 52,
       "anchor": "bottom-center",
-      "text": "UI Demo"
+      "text": "Menu"
     }
   ]
 }

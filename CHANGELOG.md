@@ -5,6 +5,7 @@
 - Completed the deterministic scheduler increment for campaign simulation support.
 - Added absolute-tick scheduling and cancellation for queued events.
 - Preserved fractional progress under non-integer time scales instead of silently truncating it.
+- Added a real-time `advance_seconds()` bridge so the runtime can feed frame deltas without losing sub-tick progress.
 - Added a derived campaign day from the deterministic tick clock.
 - Persisted fractional scheduler progress through save/load serialization.
 - Added regression coverage for time scaling, ordering, cancellation, pause/restore, and invalid past scheduling.

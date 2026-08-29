@@ -8,7 +8,9 @@
 
 ## English
 
-PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, a visual editor and a portable runtime.
+PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing, and a portable runtime.
+
+### Current version: 0.12.0
 
 ### Current capabilities
 
@@ -21,22 +23,20 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - music, sound, waits and transitions
 - character expressions, movement and scaling with tweening
 - save/load with background, character state and history
-- in-game menu with Resume, New Game, Save, Load, History, Settings, Main Menu and Quit
-- five save slots
+- in-game menu and five save slots
 - persistent player profile
 - title screen
 - Russian and English localization through JSON catalogs
 - configurable UI theme through `theme.json`
-- declarative runtime UI widgets: Panel, Label, Image, TextBox and Button
-- percentage sizing, anchors and z-order for UI layouts
-- JSON UI documents for project-defined interfaces
-- resizable window and fullscreen
-- pygame-ce runtime
-- PySide6 desktop editor
-- visual Scene editor
-- visual Dialogue graph editor
+- runtime UI widgets: Panel, Label, Image, TextBox and Button
+- percentage sizing, anchors and z-order
+- declarative `ui.json` project interfaces
+- clickable UI buttons with actions such as `new_game`, `menu`, `continue`, `quit`, and `jump:<label>`
+- visual UI Editor with widget tree, canvas and Inspector
+- visual Scene Editor
+- visual Dialogue Graph Editor
 - graph-to-`.vn` compiler
-- parser, expression, scene, graph, UI and animation tests
+- parser, expression, scene, graph, UI, profile and animation tests
 - PyInstaller helper and GitHub Actions build matrix
 
 ### Install
@@ -60,7 +60,7 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains Script, Scene and Dialogue workflows. Scene editing handles visual character placement; Dialogue editing handles branching story graphs and compilation to `game.vn`.
+The editor contains Script, Scene, Dialogue and UI workflows. UI editing lets you create widgets, change their properties visually, and save the result to `ui.json`.
 
 ### Runtime controls
 
@@ -75,7 +75,7 @@ The editor contains Script, Scene and Dialogue workflows. Scene editing handles 
 
 ### UI layout
 
-Project UI can be described as JSON and loaded with `UIDocument`.
+Project UI can be described as JSON and edited visually in the UI tab.
 
 ```json
 {
@@ -87,6 +87,7 @@ Project UI can be described as JSON and loaded with `UIDocument`.
     {
       "type": "button",
       "id": "start",
+      "action": "new_game",
       "x": "50%",
       "y": "50%",
       "width": 240,
@@ -157,35 +158,35 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 ## Русский
 
-PyNovel Engine это движок и редактор визуальных новелл с упором на понятный сценарный язык, визуальное редактирование и кроссплатформенный runtime.
+PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
+
+### Текущая версия: 0.12.0
 
 ### Возможности
 
-- понятный язык сценариев `.vn`
+- человекочитаемый язык сценариев `.vn`
 - сцены, фоны и персонажи
 - диалоги и повествование с эффектом печати
 - выборы мышью и клавиатурой
 - `label`, `jump`, переменные и безопасные выражения
 - `if / else / endif`
-- музыка, звуки, задержки и переходы
+- музыка, звуки, ожидание и переходы
 - выражения персонажей, перемещение и масштабирование с tween-анимацией
-- сохранение и загрузка состояния, включая фон, персонажей и историю
-- внутриигровое меню: продолжить, новая игра, сохранить, загрузить, история, настройки, главное меню и выход
+- сохранение и загрузка состояния
 - пять слотов сохранения
+- внутриигровое меню и Title Screen
 - постоянный профиль игрока
-- стартовый экран
-- локализация интерфейса через JSON-каталоги на русском и английском
-- настраиваемая тема интерфейса через `theme.json`
-- декларативные UI-компоненты runtime: Panel, Label, Image, TextBox и Button
-- процентные размеры, anchors и z-порядок UI-компонентов
-- JSON-документы для интерфейсов проекта
-- изменение размера окна и полноэкранный режим
-- runtime на pygame-ce
-- редактор на PySide6
-- визуальный редактор сцен
-- визуальный редактор графа диалогов
+- локализация интерфейса на русском и английском
+- настраиваемая тема через `theme.json`
+- UI-компоненты runtime: `Panel`, `Label`, `Image`, `TextBox`, `Button`
+- процентные размеры, anchors и `z`-порядок
+- интерфейсы проекта в `ui.json`
+- кликабельные UI-кнопки с actions `new_game`, `menu`, `continue`, `quit` и `jump:<label>`
+- визуальный UI Editor с деревом виджетов, canvas и Inspector
+- визуальный Scene Editor
+- визуальный Dialogue Graph Editor
 - компиляция графа в `.vn`
-- тесты parser, expressions, сцен, графов, UI и анимаций
+- тесты parser, expressions, сцен, графов, UI, профиля и анимаций
 - сборка через PyInstaller и GitHub Actions
 
 ### Установка
@@ -209,13 +210,13 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть рабочие области Script, Scene и Dialogue. В Scene персонажи размещаются визуально, а в Dialogue создаётся ветвящийся граф истории с последующей компиляцией в `game.vn`.
+В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**. В UI можно создавать компоненты, менять их свойства визуально и сохранять результат в `ui.json`.
 
 ### Управление в игре
 
 - `Enter` / `Space`: продолжить
 - `1-9`: выбрать вариант
-- `Esc`: открыть внутриигровое меню
+- `Esc`: открыть меню
 - `F5`: быстрое сохранение в слот 1
 - `F9`: быстрая загрузка из слота 1
 - `F7`: пропуск текста
@@ -224,7 +225,7 @@ pynovel-editor examples/demo
 
 ### UI-интерфейс
 
-Интерфейс проекта можно описывать через JSON и загружать с помощью `UIDocument`.
+Интерфейс можно описывать в JSON и редактировать визуально во вкладке UI.
 
 ```json
 {
@@ -236,6 +237,7 @@ pynovel-editor examples/demo
     {
       "type": "button",
       "id": "start",
+      "action": "new_game",
       "x": "50%",
       "y": "50%",
       "width": 240,
@@ -247,67 +249,33 @@ pynovel-editor examples/demo
 }
 ```
 
-Поддерживаются `panel`, `label`, `image`, `textbox`, `button`. Компоненты можно вкладывать друг в друга; доступны anchors, процентные размеры, видимость и порядок `z`.
+Поддерживаются `panel`, `label`, `image`, `textbox`, `button`. Компоненты можно вкладывать; доступны anchors, процентные размеры, видимость и порядок `z`.
 
 ### Тема интерфейса
 
-Положите `theme.json` в корень проекта для настройки цветов интерфейса:
-
-```json
-{
-  "background": [13, 16, 28],
-  "panel": [18, 22, 34],
-  "panel_border": [220, 220, 230],
-  "text": [245, 245, 250],
-  "muted_text": [165, 170, 185],
-  "accent": [55, 70, 102],
-  "accent_hover": [72, 88, 124]
-}
-```
+В корень проекта можно положить `theme.json` и изменить оформление UI без изменения кода движка.
 
 ### Локализация
 
-Каталоги интерфейса находятся в `locales/`, например `ru.json` и `en.json`. Язык проекта задаётся в `project.json`, а профиль игрока может его переопределить.
+Каталоги интерфейса находятся в `locales/`, например `ru.json` и `en.json`. Язык проекта задаётся в `project.json`, а профиль игрока может хранить пользовательский выбор.
 
-### Пример сценария
+### Сборка
 
-```text
-title "Моя первая новелла"
-background "assets/room.png"
-character Alice "assets/alice.png" center happy
-expression Alice excited
-move Alice left 0.45
-scale Alice 1.08 0.35
-say Alice "Привет."
-set affection = 2
-set affection += 3
-if affection >= 5
-say Narrator "Открыта новая ветка!"
-else
-say Narrator "Продолжай играть."
-endif
-choice
-"Продолжить": next
-"Закончить": ending
-```
-
-### Сборка готовой игры
-
-Установите PyInstaller и собирайте приложение на целевой ОС:
+Установите PyInstaller и собирайте игру на целевой ОС:
 
 ```bash
 python -m pip install pyinstaller
 python tools/build.py examples/demo --name MyNovel
 ```
 
-Готовые нативные сборки создаются отдельно для Windows, macOS и Linux.
+Нативные сборки создаются отдельно для Windows, macOS и Linux.
+
+### Статус проекта
+
+Проект находится в активной разработке. Архитектура разделена на editor, scripting, runtime, rendering, UI и project data, поэтому новые функции добавляются отдельными слоями.
 
 ### Документация
 
 - [English README](README.md)
 - [Полное русское README](README_RU.md)
 - [Заметки по упаковке](packaging/README.md)
-
-### Статус проекта
-
-Проект находится в активной разработке. Архитектура разделена на editor, scripting, runtime, rendering, UI и project data, поэтому новые функции добавляются отдельными слоями без переписывания всего движка.

@@ -13,6 +13,7 @@ class Character:
     scale: float = 1.0
     opacity: float = 1.0
     expression: str = "neutral"
+    rotation: float = 0.0
 
 @dataclass
 class ChoiceOption:

@@ -11,7 +11,7 @@ from vnengine.script.parser import VNParser,VNParseError
 ASSET_EXTS={'.png','.jpg','.jpeg','.webp','.wav','.ogg','.mp3','.mp4','.json','.vn'}
 class Editor(QMainWindow):
     def __init__(self,project:str|Path):
-        super().__init__(); self.project=Path(project); self.current=None; self.setWindowTitle(f'PyNovel Editor 0.12 — {self.project.name}'); self.resize(1600,920); self.status=QStatusBar(); self.setStatusBar(self.status)
+        super().__init__(); self.project=Path(project); self.current=None; self.setWindowTitle(f'PyNovel Editor 0.13 — {self.project.name}'); self.resize(1600,920); self.status=QStatusBar(); self.setStatusBar(self.status)
         central=QWidget(); self.setCentralWidget(central); root=QVBoxLayout(central); bar=QHBoxLayout(); root.addLayout(bar)
         for label,slot in [('Save',self.save_file),('Validate',self.validate),('Run',self.run_game),('Open folder',self.open_folder)]: b=QPushButton(label); b.clicked.connect(slot); bar.addWidget(b)
         bar.addStretch(); self.tabs=QTabWidget(); root.addWidget(self.tabs,1)
@@ -36,6 +36,7 @@ class Editor(QMainWindow):
         try:s=VNParser().parse(self.editor.toPlainText(),title=self.project.name); self.preview.setText(f'Actions: {len(s.actions)}\nLabels: {len(s.labels)}\n\nScript valid')
         except Exception as exc:self.preview.setText(f'Parser error\n{exc}')
     def save_file(self):
+        if self.tabs.currentWidget() is self.ui_tab:self.ui_tab.save_file(); self.status.showMessage('UI saved'); return
         if not self.current or not self.current.is_file() or self.current.suffix.lower() not in {'.vn','.json'}:return
         self.current.write_text(self.editor.toPlainText(),encoding='utf-8'); self._stats(); self.status.showMessage(f'Saved {self.current.name}')
     def validate(self):
@@ -48,7 +49,7 @@ class Editor(QMainWindow):
         finally:self.show()
     def open_folder(self):
         path=QFileDialog.getExistingDirectory(self,'Choose project',str(self.project.parent))
-        if path:self.project=Path(path); self.current=None; self.setWindowTitle(f'PyNovel Editor 0.12 — {self.project.name}'); self.reload()
+        if path:self.project=Path(path); self.current=None; self.setWindowTitle(f'PyNovel Editor 0.13 — {self.project.name}'); self.reload()
 def main():
     project=sys.argv[1] if len(sys.argv)>1 else 'examples/demo'; app=QApplication(sys.argv); win=Editor(project); win.show(); sys.exit(app.exec())
 if __name__=='__main__':main()

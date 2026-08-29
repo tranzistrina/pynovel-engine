@@ -16,8 +16,10 @@ class RouteBuilder:
     """Builds graph routes with optional movement policy hooks."""
     def __init__(self, definition: MapDefinition, on_route: Callable[[Route], None] | None = None, policy: MovementPolicy | None = None):
         self.definition = definition; self.on_route = on_route; self.policy = policy
+        self._nodes = {node.id: node for node in definition.nodes}
 
     def build(self, start: str, goal: str, base_cost: float = 1.0) -> Route | None:
+        if start not in self._nodes or goal not in self._nodes: raise KeyError(f"Unknown route node: {start if start not in self._nodes else goal}")
         def allowed(source: str, target: str, edge: MapConnection) -> bool:
             return self.policy.can_traverse(source, target) if self.policy else True
         def cost(source: str, target: str, edge: MapConnection) -> float:

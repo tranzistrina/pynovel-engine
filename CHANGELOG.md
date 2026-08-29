@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.38.0
+
+- Added a reusable `Notification` model with title, body, severity, icon, campaign timestamp, action and unread state.
+- Added deterministic ordered `NotificationLog` storage with read/unread tracking, removal, clearing and serialization.
+- Exposed notification APIs from the extension package for external projects.
+- Integrated notifications into `ExtensibleRuntime` with `notify()` and `mark_notification_read()` helpers and `notification.created` / `notification.read` events.
+- Persisted notification history through versioned runtime saves.
+- Added regression coverage for notification ordering, unread state, IDs, serialization and lifecycle operations.
+- Kept notification presentation generic so `inhRPG` owns its event semantics and UI.
+
 ## 0.37.0
 
 - Completed the deterministic scheduler increment for campaign simulation support.

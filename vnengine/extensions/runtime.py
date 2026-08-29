@@ -10,21 +10,25 @@ from vnengine.extensions.scenes import SceneStack
 from vnengine.extensions.scheduler import GameScheduler
 from vnengine.extensions.state import StateRegistry
 from vnengine.extensions.system import SystemRegistry
+from vnengine.map.movement import MovementController
 
 
 class ExtensibleRuntime(CoreRuntime):
     """Core Runtime with opt-in project extension primitives."""
 
-    ENGINE_VERSION = "0.32.0"
+    ENGINE_VERSION = "0.33.0"
 
     def __init__(self, story, asset_root):
         super().__init__(story, asset_root)
         self.event_bus = EventBus(); self.systems = SystemRegistry(); self.commands = CommandRegistry()
         self.scene_stack = SceneStack(self); self.game_state = StateRegistry(); self.scheduler = GameScheduler(); self.rng = DeterministicRNG(0)
+        self.movement = None
         self._register_builtin_extension_actions(); self.emit("project.startup", {"title": story.title})
 
-    def _register_builtin_extension_actions(self) -> None:
-        self._extension_handlers = {"call_system": self._call_system, "emit": self._emit_action, "set_state": self._set_state, "open_scene": self._open_scene, "close_scene": self._close_scene}
+    def attach_movement(self, definition) -> MovementController:
+        self.movement = MovementController(definition, self.emit)
+        return self.movement
+
     def register_system(self, system) -> None: self.systems.register(system)
     def unregister_system(self, name: str) -> None: self.systems.unregister(name)
     def register_command(self, name: str, handler) -> None: self.commands.register(name, handler)
@@ -43,12 +47,15 @@ class ExtensibleRuntime(CoreRuntime):
         super().update(dt)
         for system in self.systems.values(): system.update(dt, self.game_state)
         self.scene_stack.update(dt)
+        if self.movement is not None: self.movement.update(dt)
         self.scheduler.advance(max(0, int(dt * self.scheduler.tick_rate)), lambda item: self.emit(item.event, item.data))
 
     def dispatch_input(self, event: object) -> bool:
         if self.scene_stack.handle_input(event): return True
         return any(system.handle_event(event, self.game_state) for system in self.systems.values())
 
+    def _register_builtin_extension_actions(self) -> None:
+        self._extension_handlers = {"call_system": self._call_system, "emit": self._emit_action, "set_state": self._set_state, "open_scene": self._open_scene, "close_scene": self._close_scene}
     def _call_system(self, action: Action) -> None:
         system = self.systems.get(action.data["system"])
         if system is None: raise RuntimeError(f"Unknown game system: {action.data['system']}")
@@ -71,6 +78,7 @@ class ExtensibleRuntime(CoreRuntime):
         bundle = SaveBundle(self.ENGINE_VERSION, project_version)
         bundle.state = {"runtime": self.state.variables, "extensions": self.game_state.serialize(), "scheduler": self.scheduler.serialize()}
         bundle.extensions = {name: system.serialize() for name, system in self.systems.items() if hasattr(system, "serialize")}
+        if self.movement is not None: bundle.extensions["__movement__"] = {k: _serialize_movement(v) for k, v in self.movement.active.items()}
         bundle.rng = self.rng.serialize(); bundle.save(path)
 
     def load_bundle(self, path, project_version: str = "1") -> None:
@@ -78,6 +86,9 @@ class ExtensibleRuntime(CoreRuntime):
         if bundle.project_version != project_version: raise ValueError(f"project save version mismatch: {bundle.project_version} != {project_version}")
         self.state.variables = dict(bundle.state.get("runtime", {})); self.game_state.deserialize(bundle.state.get("extensions", {}))
         for name, payload in bundle.extensions.items():
+            if name == "__movement__":
+                if self.movement is not None: self.movement.restore(payload)
+                continue
             system = self.systems.get(name)
             if system is not None and hasattr(system, "deserialize"): system.deserialize(payload)
         self.rng.deserialize(bundle.rng); self.scheduler.deserialize(bundle.state.get("scheduler", {}))
@@ -108,3 +119,7 @@ class ExtensibleRuntime(CoreRuntime):
         for system in self.systems.values():
             close = getattr(system, "shutdown", None)
             if close is not None: close()
+
+
+def _serialize_movement(movement):
+    return {"route": list(movement.route.nodes), "position": [movement.position.x, movement.position.y], "segment": movement.segment, "progress": movement.progress, "speed": movement.speed, "paused": movement.paused, "cost": movement.route.cost}

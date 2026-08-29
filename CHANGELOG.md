@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.37.0
+
+- Completed the deterministic scheduler increment for campaign simulation support.
+- Added absolute-tick scheduling and cancellation for queued events.
+- Preserved fractional progress under non-integer time scales instead of silently truncating it.
+- Added a derived campaign day from the deterministic tick clock.
+- Persisted fractional scheduler progress through save/load serialization.
+- Added regression coverage for time scaling, ordering, cancellation, pause/restore, and invalid past scheduling.
+- Kept scheduler behavior generic so external projects such as `inhRPG` own their campaign rules.
+
 ## 0.36.0
 
 - Routed generic VN extension actions through the public `CommandRegistry` so external projects can register new script commands without modifying the engine action loop.

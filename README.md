@@ -8,7 +8,7 @@
 
 PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing and a portable runtime.
 
-### Current version: 0.18.0
+### Current version: 0.19.0
 
 ### Current capabilities
 
@@ -34,11 +34,11 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - alignment tools and keyboard movement;
 - reusable UI hierarchy model with safe reparenting between `Panel` containers;
 - clone operations with unique IDs;
-- group translation and sequential z-order helpers;
+- group translation, scaling, alignment and distribution helpers;
 - shared multi-selection model;
 - Ctrl-click multi-selection in the UI canvas and hierarchy;
 - group move, duplicate, delete and reparent operations;
-- reusable rectangle-selection geometry helpers for editor tooling;
+- reusable rectangle-selection geometry helpers;
 - visual Scene Editor;
 - visual Dialogue Graph Editor;
 - graph-to-`.vn` compiler;
@@ -69,9 +69,9 @@ The editor contains Script, Scene, Dialogue and UI workflows.
 
 ### UI Editor
 
-The UI tab provides a visual canvas for `ui.json`. Create widgets, select one or many from the hierarchy or canvas, edit the active widget in Inspector, move and resize it, duplicate or delete selections, reparent widgets into `Panel` containers, then save.
+The UI tab provides a visual canvas for `ui.json`. Create widgets, select one or many from the hierarchy or canvas, edit the active widget in Inspector, move and resize it, duplicate or delete selections, reparent widgets into `Panel` containers, and save.
 
-Reusable editor geometry includes normalized rectangle selection and intersection helpers for future marquee selection tools.
+Group helpers provide translation, scaling, alignment and distribution for editor tooling, while hierarchy operations remain independent of Qt.
 
 Keyboard shortcuts:
 
@@ -82,7 +82,7 @@ Keyboard shortcuts:
 - `Ctrl+Y`: redo
 - `Ctrl+S`: save
 - `Arrow keys`: move the selection by 1 pixel
-- `Shift + Arrow`: move the selection by 10 pixels
+- `Shift + Arrow`: move by 10 pixels
 
 ### UI example
 
@@ -155,7 +155,7 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
 
-### Текущая версия: 0.18.0
+### Текущая версия: 0.19.0
 
 ### Возможности
 
@@ -179,10 +179,10 @@ PyNovel Engine — кроссплатформенный движок и реда
 - визуальный UI Editor с деревом, canvas и Inspector;
 - Undo/Redo, Duplicate, Delete, перемещение и изменение размера;
 - безопасный reparenting между контейнерами `Panel`;
-- групповое перемещение, дублирование, удаление и назначение `z`;
 - общая модель multi-selection;
-- Ctrl-клик для выделения нескольких виджетов;
-- переиспользуемые helper-функции геометрии рамки выделения;
+- групповой сдвиг, масштабирование, выравнивание и распределение элементов;
+- helper геометрии рамки выделения;
+- горячие клавиши для работы с группами;
 - визуальный Scene Editor;
 - визуальный Dialogue Graph Editor;
 - компиляция графа в `.vn`;
@@ -215,7 +215,7 @@ pynovel-editor examples/demo
 
 Во вкладке UI можно визуально собирать `ui.json`: создавать компоненты, выделять один или несколько элементов в дереве или на canvas, менять свойства в Inspector, перемещать, изменять размер, дублировать и удалять элементы, переносить их между контейнерами `Panel` и сохранять результат.
 
-В отдельном editor-слое есть переиспользуемая геометрия для рамки выделения и проверки пересечений, чтобы следующие canvas-инструменты не были жёстко пришиты к Qt.
+Групповые инструменты поддерживают перемещение, масштабирование, выравнивание и распределение элементов. Основная логика hierarchy и selection не зависит от Qt.
 
 Горячие клавиши:
 

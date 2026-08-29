@@ -1,32 +1,20 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Callable
-import operator
-import json
-import pygame
+import operator, json, pygame
 from vnengine.core.expressions import evaluate
 from vnengine.core.model import Action, SaveState, Story, Character
 from vnengine.core.save import read_save, write_save
 from vnengine.animation.tween import Tween
 from vnengine.animation.timeline_runtime import TimelinePlayer
-
-POSITIONS = {"left": 23.0, "center": 50.0, "right": 77.0}
-
+POSITIONS={"left":23.0,"center":50.0,"right":77.0}
 class GameState:
-    def __init__(self, story: Story):
-        self.story=story; self.index=0; self.variables=dict(story.variables); self.history=[]
-        self.background_path=None; self.background=None; self.characters={}; self.character_surfaces={}
-        self.dialogue=None; self.choice_options=[]; self.running=True; self.paused_for_input=False
-        self.text_progress=0.0; self.auto_mode=False; self.skip_mode=False; self.wait_until=0.0
-        self.transition_until=0.0; self.transition_name="none"; self.conditional_stack=[]
-        self.settings={"text_speed":42.0,"volume":0.8,"fullscreen":False}; self.animations={}; self.timeline_player=None
-
+    def __init__(self,story:Story):
+        self.story=story;self.index=0;self.variables=dict(story.variables);self.history=[];self.background_path=None;self.background=None;self.characters={};self.character_surfaces={};self.dialogue=None;self.choice_options=[];self.running=True;self.paused_for_input=False;self.text_progress=0.0;self.auto_mode=False;self.skip_mode=False;self.wait_until=0.0;self.transition_until=0.0;self.transition_name="none";self.conditional_stack=[];self.settings={"text_speed":42.0,"volume":0.8,"fullscreen":False};self.animations={};self.timeline_player=None
 class Runtime:
     def __init__(self,story:Story,asset_root:str|Path):
-        self.state=GameState(story); self.asset_root=Path(asset_root); self._image_cache={}; self._sound_cache={}; self.state.timeline_player=TimelinePlayer(self.asset_root)
-        self._handlers={"background":self._background,"character":self._character,"expression":self._expression,"move":self._move,"scale":self._scale,"rotate":self._rotate,"play_animation":self._play_animation,"stop_animation":self._stop_animation,"music":self._music,"music_stop":self._music_stop,"sound":self._sound,"say":self._say,"set":self._set,"jump":self._jump,"if":self._if,"else":self._else,"endif":self._endif,"choice":self._choice,"wait":self._wait,"transition":self._transition,"end":self._end,"scene":lambda a:None}
-    def asset(self,rel):
-        p=Path(rel); return p if p.is_absolute() else self.asset_root/p
+        self.state=GameState(story);self.asset_root=Path(asset_root);self._image_cache={};self._sound_cache={};self.state.timeline_player=TimelinePlayer(self.asset_root);self._handlers={"background":self._background,"character":self._character,"expression":self._expression,"move":self._move,"scale":self._scale,"rotate":self._rotate,"play_animation":self._play_animation,"stop_animation":self._stop_animation,"music":self._music,"music_stop":self._music_stop,"sound":self._sound,"say":self._say,"set":self._set,"jump":self._jump,"if":self._if,"else":self._else,"endif":self._endif,"choice":self._choice,"wait":self._wait,"transition":self._transition,"end":self._end,"scene":lambda a:None}
+    def asset(self,rel):p=Path(rel);return p if p.is_absolute() else self.asset_root/p
     def load_image(self,rel):
         if rel not in self._image_cache:self._image_cache[rel]=pygame.image.load(self.asset(rel)).convert_alpha()
         return self._image_cache[rel]
@@ -83,13 +71,12 @@ class Runtime:
             key=a.data["path"];snd=self._sound_cache.get(key) or pygame.mixer.Sound(self.asset(key));self._sound_cache[key]=snd;snd.set_volume(float(self.state.settings["volume"]));snd.play()
         except (pygame.error,FileNotFoundError):pass
     def _say(self,a):
-        self.state.dialogue=(a.data["speaker"],a.data["text"]);self.state.history.append(self.state.dialogue);self.state.history=self.state.history[-200:];self.state.paused_for_input=True;self.state.text_progress=float(len(a.data["text"]))
+        self.state.dialogue=(a.data["speaker"],a.data["text"]);self.state.history.append(self.state.dialogue);self.state.history=self.state.history[-200:];self.state.paused_for_input=True;self.state.text_progress=0.0
     def _set(self,a):
         name=a.data["name"];value=evaluate(a.data["expression"],self.state.variables);opn=a.data.get("operator","=")
         if opn=="=":self.state.variables[name]=value;return
         cur=self.state.variables.get(name,0);funcs={"+=":operator.add,"-=":operator.sub,"*=":operator.mul,"/=":operator.truediv};self.state.variables[name]=funcs[opn](cur,value)
-    def _jump(self,a):
-        self.state.index=self.state.story.labels.get(a.data["target"],len(self.state.story.actions));self.state.paused_for_input=False;self.state.dialogue=None;self.state.conditional_stack.clear()
+    def _jump(self,a):self.state.index=self.state.story.labels.get(a.data["target"],len(self.state.story.actions));self.state.paused_for_input=False;self.state.dialogue=None;self.state.conditional_stack.clear()
     def _if(self,a):self.state.conditional_stack.append(bool(evaluate(a.data["expression"],self.state.variables)))
     def _else(self,a):
         if self.state.conditional_stack:self.state.conditional_stack[-1]=not self.state.conditional_stack[-1]
@@ -108,15 +95,13 @@ class Runtime:
         if self.state.wait_until and now<self.state.wait_until:return
         self.state.wait_until=0
         if self.state.dialogue and self.state.paused_for_input:
-            self.state.dialogue=None
-            self.state.paused_for_input=False
-        elif self.state.paused_for_input:
-            return
+            self.state.dialogue=None;self.state.paused_for_input=False;self.state.text_progress=0.0
+        elif self.state.paused_for_input:return
         while self.state.index<len(self.state.story.actions) and self.state.running and not self.state.paused_for_input:
             action=self.state.story.actions[self.state.index];self.state.index+=1
             if self.state.conditional_stack and not all(self.state.conditional_stack) and action.kind not in ("if","else","endif"):continue
             self._handlers[action.kind](action)
-            if action.kind in ("say","choice","end"):break
+            if action.kind in ("say","choice","end","open_scene"):break
     def new_game(self):
         story=self.state.story;self.state=GameState(story);self.state.timeline_player=TimelinePlayer(self.asset_root);self._image_cache.clear();self._sound_cache.clear();self.advance()
     def save(self,path):write_save(path,SaveState(self.state.index,self.state.variables,self.state.history,self.state.background_path,{k:{"image":v.image,"position":v.position,"visible":v.visible,"x":v.x,"y":v.y,"scale":v.scale,"opacity":v.opacity,"expression":v.expression,"rotation":v.rotation} for k,v in self.state.characters.items()}))

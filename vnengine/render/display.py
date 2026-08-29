@@ -25,6 +25,8 @@ class Renderer:
             surf=state.character_surfaces.get(name)
             if not surf or not char.visible: continue
             img=self._fit(surf,w*.42*char.scale,h*.86*char.scale)
+            if abs(char.rotation) > 0.001:
+                img=pygame.transform.rotozoom(img,-char.rotation,1.0)
             if char.opacity < 1.0:
                 img=img.copy(); img.set_alpha(max(0,min(255,int(char.opacity*255))))
             x=int(w*(char.x/100.0)-img.get_width()/2); y=int(h*(char.y/100.0)-img.get_height()); screen.blit(img,(x,y))

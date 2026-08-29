@@ -8,7 +8,7 @@
 
 PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing and a portable runtime.
 
-### Current version: 0.15.0
+### Current version: 0.16.0
 
 ### Current capabilities
 
@@ -28,14 +28,14 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - runtime UI widgets: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
 - anchors, percentage dimensions, visibility and `z` ordering;
 - declarative project UI in `ui.json`;
-- clickable UI actions including `new_game`, `menu`, `continue`, `quit` and `jump:<label>`;
+- UI button actions such as `new_game`, `menu`, `continue`, `quit` and `jump:<label>`;
 - visual UI Editor with hierarchy, canvas and Inspector;
-- UI Editor undo/redo, duplicate, delete and canvas positioning;
-- resize handle and alignment tools;
+- UI Editor undo/redo, duplicate, delete, canvas positioning and resize;
+- alignment tools and keyboard movement;
 - reusable UI hierarchy model with safe reparenting between `Panel` containers;
 - clone operations with unique IDs;
 - group translation and sequential z-order helpers;
-- keyboard shortcuts;
+- shared multi-selection model for editor tooling;
 - visual Scene Editor;
 - visual Dialogue Graph Editor;
 - graph-to-`.vn` compiler;
@@ -68,7 +68,7 @@ The editor contains Script, Scene, Dialogue and UI workflows.
 
 The UI tab provides a visual canvas for `ui.json`. Create widgets, select them from the hierarchy or canvas, edit them in Inspector, move and resize them, then save.
 
-The hierarchy model also provides safe reparenting between `Panel` containers, cloning with unique IDs, group translation and sequential z-order assignment.
+The shared hierarchy and selection models support safe reparenting, cloning, multi-selection and group transforms without tying those operations to Qt.
 
 Keyboard shortcuts:
 
@@ -151,7 +151,7 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
 
-### Текущая версия: 0.15.0
+### Текущая версия: 0.16.0
 
 ### Возможности
 
@@ -173,12 +173,12 @@ PyNovel Engine — кроссплатформенный движок и реда
 - декларативный интерфейс проекта в `ui.json`;
 - действия UI-кнопок `new_game`, `menu`, `continue`, `quit` и `jump:<label>`;
 - визуальный UI Editor с деревом, canvas и Inspector;
-- Undo/Redo, Duplicate, Delete и перемещение на canvas;
-- resize handle и инструменты выравнивания;
-- отдельная модель UI hierarchy с безопасным переносом между контейнерами `Panel`;
+- Undo/Redo, Duplicate, Delete, перемещение и изменение размера;
+- инструменты выравнивания и горячие клавиши;
+- отдельная модель hierarchy с безопасным reparenting между `Panel`;
 - клонирование с уникальными ID;
-- групповой сдвиг и последовательное назначение `z`-порядка;
-- горячие клавиши;
+- групповой сдвиг и назначение `z`-порядка;
+- общая модель multi-selection для редакторов;
 - визуальный Scene Editor;
 - визуальный Dialogue Graph Editor;
 - компиляция графа в `.vn`;
@@ -211,7 +211,7 @@ pynovel-editor examples/demo
 
 Во вкладке UI можно визуально собирать `ui.json`: создавать компоненты, выбирать их в дереве или на canvas, менять свойства в Inspector, перемещать и изменять размер, а затем сохранять результат.
 
-Модель hierarchy поддерживает безопасный перенос элементов между контейнерами `Panel`, клонирование с уникальными ID, групповой сдвиг и последовательное назначение `z`-порядка.
+Общая модель hierarchy и selection поддерживает безопасный перенос между контейнерами, клонирование, multi-selection и групповые преобразования без привязки этой логики к Qt.
 
 Горячие клавиши:
 

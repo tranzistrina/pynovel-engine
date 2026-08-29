@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.17.0
+
+- Connected the shared multi-selection model to the visual UI Editor.
+- Added Ctrl-click multi-selection on the canvas and in the hierarchy tree.
+- Added group move, duplicate and delete behavior.
+- Added multi-widget reparenting into a target `Panel` container.
+- Added group z-order assignment through the UI Editor.
+- Kept hierarchy operations independent from Qt through reusable Python helpers.
+- Updated the main bilingual README for 0.17.0.
+
+## 0.16.0
+
+- Added a reusable shared selection model for editor tooling.
+- Added selection set/add/remove/toggle/clear operations.
+- Added group translation and sequential z-order helpers to editor-facing APIs.
+- Added regression tests for selection behavior.
+
 ## 0.15.0
 
 - Added a reusable UI hierarchy model for editor-side project data.

@@ -1,0 +1,30 @@
+{
+  "name": "Alice Enter",
+  "loop": false,
+  "tracks": [
+    {
+      "target": "Alice",
+      "property": "x",
+      "keys": [
+        {"time": 0.0, "value": 0.0, "easing": "ease_out"},
+        {"time": 0.6, "value": 50.0, "easing": "ease_in_out"}
+      ]
+    },
+    {
+      "target": "Alice",
+      "property": "opacity",
+      "keys": [
+        {"time": 0.0, "value": 0.0, "easing": "linear"},
+        {"time": 0.4, "value": 1.0, "easing": "ease_out"}
+      ]
+    },
+    {
+      "target": "Alice",
+      "property": "scale",
+      "keys": [
+        {"time": 0.0, "value": 0.92, "easing": "ease_out"},
+        {"time": 0.5, "value": 1.0, "easing": "ease_in_out"}
+      ]
+    }
+  ]
+}

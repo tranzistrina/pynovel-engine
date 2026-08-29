@@ -15,4 +15,5 @@ from .route_builder import RouteBuilder, RouteRequest
 from .selection import Selectable, SelectionModel
 from .surface import MapMarker, MapSurface
 from .world import MapWorld
-__all__ = ["Camera2D","MapConnection","MapDefinition","MapNode","MapPoint","Route","shortest_path","RouteBuilder","RouteRequest","Movement","MovementController","MovementCommand","MovementOrder","MovementPolicy","TerrainPolicy","TerrainRules","terrain_for","connection_terrain","EntityRegistry","MapEntity","MapWorld","Selectable","SelectionModel","MultiSelection","SelectionChange","MapController","MapEvent","MapAction","MapInteraction","BoxSelector","BoxSelectionController","MapMarker","MapSurface"]
+from .commands import CommandResult, MapCommandDispatcher
+__all__ = ["Camera2D","MapConnection","MapDefinition","MapNode","MapPoint","Route","shortest_path","RouteBuilder","RouteRequest","Movement","MovementController","MovementCommand","MovementOrder","MovementPolicy","TerrainPolicy","TerrainRules","terrain_for","connection_terrain","EntityRegistry","MapEntity","MapWorld","CommandResult","MapCommandDispatcher","Selectable","SelectionModel","MultiSelection","SelectionChange","MapController","MapEvent","MapAction","MapInteraction","BoxSelector","BoxSelectionController","MapMarker","MapSurface"]

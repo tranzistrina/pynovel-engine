@@ -1,0 +1,19 @@
+{
+  "width": 1200,
+  "height": 700,
+  "nodes": [
+    {"id": "capital", "x": 150, "y": 350, "label": "Capital"},
+    {"id": "north", "x": 450, "y": 150, "label": "North"},
+    {"id": "east", "x": 850, "y": 300, "label": "East"},
+    {"id": "south", "x": 500, "y": 550, "label": "South"}
+  ],
+  "connections": [
+    {"source": "capital", "target": "north", "cost": 1},
+    {"source": "capital", "target": "south", "cost": 1},
+    {"source": "north", "target": "east", "cost": 1},
+    {"source": "south", "target": "east", "cost": 1}
+  ],
+  "entities": [
+    {"id": "army_1", "node_id": "capital", "components": {"kind": "army"}}
+  ]
+}

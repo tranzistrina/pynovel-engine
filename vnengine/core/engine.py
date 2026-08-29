@@ -30,32 +30,22 @@ class Runtime:
             "else": self._else, "endif": self._endif, "choice": self._choice, "wait": self._wait,
             "transition": self._transition, "end": self._end, "scene": lambda a: None,
         }
-
     def asset(self, rel):
         p = Path(rel); return p if p.is_absolute() else self.asset_root / p
-
     def apply_scene_manifest(self, path="scene.json"):
         manifest = Path(path); manifest = manifest if manifest.is_absolute() else self.asset_root / manifest
         if not manifest.exists(): return
         data = json.loads(manifest.read_text(encoding="utf-8"))
         if data.get("background"): self._background(Action("background", {"path": data["background"]}))
         for raw in data.get("characters", []):
-            self._character(Action("character", {
-                "name": raw.get("name", "Character"), "image": raw.get("image", ""),
-                "position": raw.get("position", "center"), "expression": raw.get("expression", "neutral"),
-                "x": raw.get("x"), "y": raw.get("y", 100.0), "scale": raw.get("scale", 1.0),
-                "action": "show" if raw.get("visible", True) else "hide",
-            }))
-
+            self._character(Action("character", {"name": raw.get("name", "Character"), "image": raw.get("image", ""), "position": raw.get("position", "center"), "expression": raw.get("expression", "neutral"), "x": raw.get("x"), "y": raw.get("y", 100.0), "scale": raw.get("scale", 1.0), "action": "show" if raw.get("visible", True) else "hide"}))
     def load_image(self, rel):
         if rel not in self._image_cache: self._image_cache[rel] = pygame.image.load(self.asset(rel)).convert_alpha()
         return self._image_cache[rel]
-
     def _background(self, a):
         self.state.background_path = a.data["path"]
         try: self.state.background = self.load_image(a.data["path"])
         except (FileNotFoundError, pygame.error): self.state.background = None
-
     def _character(self, a):
         name = a.data["name"]
         if a.data.get("action") == "hide":
@@ -66,75 +56,70 @@ class Runtime:
         self.state.characters[name] = char
         try: self.state.character_surfaces[name] = self.load_image(char.image)
         except (FileNotFoundError, pygame.error): self.state.character_surfaces.pop(name, None)
-
     def _expression(self, a):
         char = self.state.characters.get(a.data["name"])
         if char: char.expression = a.data["expression"]
-
     def _move(self, a):
         char = self.state.characters.get(a.data["name"])
         if not char: return
-        target = POSITIONS.get(a.data["position"], char.x)
-        self.state.animations.setdefault(char.name, {})["x"] = Tween(char.x, target, float(a.data.get("duration", .35)))
-        char.position = a.data["position"]
-
+        target = POSITIONS.get(a.data["position"], char.x); self.state.animations.setdefault(char.name, {})["x"] = Tween(char.x, target, float(a.data.get("duration", .35))); char.position = a.data["position"]
     def _scale(self, a):
         char = self.state.characters.get(a.data["name"])
         if not char: return
         self.state.animations.setdefault(char.name, {})["scale"] = Tween(char.scale, float(a.data["scale"]), float(a.data.get("duration", .35)))
-
     def update(self, dt):
-        finished = []
-        for name, props in list(self.state.animations.items()):
-            char = self.state.characters.get(name)
+        finished=[]
+        for name,props in list(self.state.animations.items()):
+            char=self.state.characters.get(name)
             if not char: finished.append(name); continue
-            for prop, tween in props.items(): setattr(char, prop, tween.step(dt))
+            for prop,tween in props.items(): setattr(char,prop,tween.step(dt))
             if all(t.done for t in props.values()): finished.append(name)
-        for name in finished: self.state.animations.pop(name, None)
-
-    def _music(self, a):
+        for name in finished:self.state.animations.pop(name,None)
+    def _music(self,a):
         try: pygame.mixer.music.load(self.asset(a.data["path"])); pygame.mixer.music.set_volume(float(self.state.settings["volume"])); pygame.mixer.music.play(-1)
         except pygame.error: pass
-    def _music_stop(self, a):
+    def _music_stop(self,a):
         try: pygame.mixer.music.fadeout(300)
         except pygame.error: pass
-    def _sound(self, a):
+    def _sound(self,a):
         try:
             key=a.data["path"]; snd=self._sound_cache.get(key) or pygame.mixer.Sound(self.asset(key)); self._sound_cache[key]=snd; snd.set_volume(float(self.state.settings["volume"])); snd.play()
-        except (pygame.error, FileNotFoundError): pass
-    def _say(self, a):
+        except (pygame.error,FileNotFoundError): pass
+    def _say(self,a):
         self.state.dialogue=(a.data["speaker"],a.data["text"]); self.state.history.append(self.state.dialogue); self.state.history=self.state.history[-200:]; self.state.paused_for_input=True; self.state.text_progress=0.0
-    def _set(self, a):
-        name=a.data["name"]; value=evaluate(a.data["expression"],self.state.variables); opn=a.data.get("operator", "=")
-        if opn == "=": self.state.variables[name]=value; return
+    def _set(self,a):
+        name=a.data["name"]; value=evaluate(a.data["expression"],self.state.variables); opn=a.data.get("operator","=")
+        if opn=="=":self.state.variables[name]=value; return
         cur=self.state.variables.get(name,0); funcs={"+=":operator.add,"-=":operator.sub,"*=":operator.mul,"/=":operator.truediv}; self.state.variables[name]=funcs[opn](cur,value)
-    def _jump(self, a):
+    def _jump(self,a):
         self.state.index=self.state.story.labels.get(a.data["target"],len(self.state.story.actions)); self.state.paused_for_input=False; self.state.dialogue=None; self.state.conditional_stack.clear()
-    def _if(self, a): self.state.conditional_stack.append(bool(evaluate(a.data["expression"],self.state.variables)))
-    def _else(self, a):
-        if self.state.conditional_stack: self.state.conditional_stack[-1]=not self.state.conditional_stack[-1]
-    def _endif(self, a):
-        if self.state.conditional_stack: self.state.conditional_stack.pop()
-    def _choice(self, a): self.state.choice_options=a.data["options"]; self.state.paused_for_input=True
-    def _wait(self, a): self.state.wait_until=pygame.time.get_ticks()/1000.0+float(a.data["seconds"])
-    def _transition(self, a): self.state.transition_name=a.data["name"]; self.state.transition_until=pygame.time.get_ticks()/1000.0+float(a.data.get("duration",.35))
-    def _end(self, a): self.state.running=False
-    def choose(self, number):
-        if not 0 <= number < len(self.state.choice_options): return
+    def _if(self,a):self.state.conditional_stack.append(bool(evaluate(a.data["expression"],self.state.variables)))
+    def _else(self,a):
+        if self.state.conditional_stack:self.state.conditional_stack[-1]=not self.state.conditional_stack[-1]
+    def _endif(self,a):
+        if self.state.conditional_stack:self.state.conditional_stack.pop()
+    def _choice(self,a):self.state.choice_options=a.data["options"]; self.state.paused_for_input=True
+    def _wait(self,a):self.state.wait_until=pygame.time.get_ticks()/1000.0+float(a.data["seconds"])
+    def _transition(self,a):self.state.transition_name=a.data["name"]; self.state.transition_until=pygame.time.get_ticks()/1000.0+float(a.data.get("duration",.35))
+    def _end(self,a):self.state.running=False
+    def choose(self,number):
+        if not 0<=number<len(self.state.choice_options):return
         target=self.state.choice_options[number].target; self.state.choice_options=[]; self._jump(Action("jump",{"target":target})); self.advance()
     def advance(self):
-        if not self.state.running: return
+        if not self.state.running:return
         now=pygame.time.get_ticks()/1000.0
-        if self.state.wait_until and now < self.state.wait_until: return
+        if self.state.wait_until and now<self.state.wait_until:return
         self.state.wait_until=0
         if self.state.paused_for_input:
-            if self.state.dialogue: self.state.dialogue=None; self.state.paused_for_input=False
+            if self.state.dialogue:self.state.dialogue=None; self.state.paused_for_input=False
             return
-        while self.state.index < len(self.state.story.actions) and self.state.running and not self.state.paused_for_input:
-            action=self.state.story.actions[self.state.index]; self.state.index += 1
-            if self.state.conditional_stack and not all(self.state.conditional_stack) and action.kind not in ("if","else","endif"): continue
+        while self.state.index<len(self.state.story.actions) and self.state.running and not self.state.paused_for_input:
+            action=self.state.story.actions[self.state.index]; self.state.index+=1
+            if self.state.conditional_stack and not all(self.state.conditional_stack) and action.kind not in ("if","else","endif"):continue
             self._handlers[action.kind](action)
-            if action.kind in ("say","choice","end"): break
+            if action.kind in ("say","choice","end"):break
+    def new_game(self):
+        story=self.state.story; self.state=GameState(story); self._image_cache.clear(); self._sound_cache.clear(); self.apply_scene_manifest(); self.advance()
     def save(self,path):
         write_save(path,SaveState(self.state.index,self.state.variables,self.state.history,self.state.background_path,{k:{"image":v.image,"position":v.position,"visible":v.visible,"x":v.x,"y":v.y,"scale":v.scale,"opacity":v.opacity,"expression":v.expression} for k,v in self.state.characters.items()}))
     def load(self,path):

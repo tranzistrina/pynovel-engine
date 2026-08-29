@@ -8,7 +8,7 @@
 
 PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI editing, asset management, and a portable runtime.
 
-### Current version: 0.22.0
+### Current version: 0.23.0
 
 ### Features
 
@@ -30,6 +30,8 @@ PyNovel Engine is a Python-first visual novel toolkit with readable scripting, v
 - persistent `.pynovel/assets.json` project asset index;
 - `pynovel assets scan <project>` resource scanning command;
 - Asset Browser with search, type filtering, image/text preview and path copy;
+- drag-and-drop assets from Asset Browser into Scene and UI canvases;
+- automatic character/image node creation with unique IDs;
 - PyInstaller helper and GitHub Actions build support.
 
 ### Install
@@ -52,17 +54,15 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains **Script**, **Scene**, **Dialogue**, **UI**, and **Assets** workflows. The Asset Browser indexes project resources and provides fast search, filtering, preview and path copying.
+The editor contains **Script**, **Scene**, **Dialogue**, **UI**, and **Assets** workflows.
 
 ### Asset pipeline
-
-Scan a project from the command line:
 
 ```bash
 pynovel assets scan examples/demo
 ```
 
-The generated index is stored at `.pynovel/assets.json` and uses normalized project-relative paths.
+The generated index is stored at `.pynovel/assets.json` and uses normalized project-relative paths. Assets can then be dragged directly onto the Scene or UI canvas.
 
 ### UI editing
 
@@ -73,8 +73,6 @@ The generated index is stored at `.pynovel/assets.json` and uses normalized proj
 - `Ctrl+S`: save;
 - Arrow keys: move by 1 px;
 - Shift + Arrow: move by 10 px.
-
-The editor-side geometry layer provides normalized marquee rectangles, intersection checks, group bounds and proportional group scaling for canvas tools.
 
 ### Build
 
@@ -91,7 +89,7 @@ Build native bundles separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием, управлением ресурсами и переносимым runtime.
 
-### Текущая версия: 0.22.0
+### Текущая версия: 0.23.0
 
 ### Возможности
 
@@ -113,6 +111,8 @@ PyNovel Engine — кроссплатформенный движок и реда
 - постоянный индекс `.pynovel/assets.json`;
 - команда `pynovel assets scan <project>`;
 - Asset Browser с поиском, фильтрами, предпросмотром и копированием пути;
+- drag-and-drop ассетов из Asset Browser прямо на Scene и UI canvas;
+- автоматическое создание персонажей и Image-виджетов с уникальными ID;
 - сборка через PyInstaller и GitHub Actions.
 
 ### Установка
@@ -136,11 +136,9 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI** и **Assets**. Asset Browser индексирует ресурсы проекта и позволяет быстро искать, фильтровать, просматривать и копировать пути к ним.
+В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI** и **Assets**. Asset Browser индексирует ресурсы проекта и позволяет перетаскивать их непосредственно на canvas.
 
 ### Управление ресурсами
-
-Индексировать ресурсы проекта можно из командной строки:
 
 ```bash
 pynovel assets scan examples/demo
@@ -157,8 +155,6 @@ pynovel assets scan examples/demo
 - `Ctrl+S`: сохранить;
 - стрелки: перемещение на 1 пиксель;
 - `Shift + Стрелки`: перемещение на 10 пикселей.
-
-Editor-слой также содержит переиспользуемую геометрию для marquee selection, проверки пересечений, bounding box группы и пропорционального масштабирования.
 
 ### Сборка
 

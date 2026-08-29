@@ -1,0 +1,11 @@
+{
+  "title": "PyNovel Demo",
+  "start": "start",
+  "nodes": [
+    {"id":"start","kind":"say","speaker":"Narrator","text":"Добро пожаловать в визуальный редактор диалогов.","target":"alice","x":80,"y":120,"options":[]},
+    {"id":"alice","kind":"say","speaker":"Alice","text":"Теперь историю можно собирать узлами.","target":"choice","x":360,"y":120,"options":[]},
+    {"id":"choice","kind":"choice","speaker":"","text":"","target":"","x":650,"y":80,"options":[{"text":"Продолжить","target":"good"},{"text":"Закончить","target":"end"}]},
+    {"id":"good","kind":"say","speaker":"Alice","text":"Тогда продолжаем разработку.","target":"end","x":980,"y":40,"options":[]},
+    {"id":"end","kind":"end","speaker":"","text":"","target":"","x":980,"y":260,"options":[]}
+  ]
+}

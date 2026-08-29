@@ -6,9 +6,28 @@
 
 ## English
 
-PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI/animation editing, asset management, live graphical animation preview, and a portable runtime.
+PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI/animation editing, asset management, live graphical animation preview, an extensible runtime API, dynamic UI bindings, deterministic scheduling/RNG primitives, and a portable runtime.
 
-### Current version: 0.28.0
+### Current version: 0.31.0
+
+### Extension API
+
+External games can build on public engine APIs without adding game-specific rules to the core runtime. Available primitives include `GameSystem`, `EventBus`, `StateRegistry`, `SceneStack`, `CommandRegistry`, `GameScheduler`, `InputMap`, map/pathfinding/selection models, and `DeterministicRNG`.
+
+### Dynamic UI bindings
+
+`ui.json` can bind widget properties to explicit state paths:
+
+```json
+{
+  "bindings": [
+    {"widget": "supplies_label", "property": "text", "state": "strategy.supplies", "transform": "str"},
+    {"widget": "legitimacy_label", "property": "text", "state": "campaign.legitimacy", "transform": "percent"}
+  ]
+}
+```
+
+Supported transforms are `str`, `int`, `float`, and `percent`.
 
 ### Features
 
@@ -21,6 +40,7 @@ PyNovel Engine is a Python-first visual novel toolkit with readable scripting, v
 - save/load, history, five slots and persistent player profile;
 - title screen, in-game menu and localization;
 - runtime UI widgets: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
+- explicit dynamic state-to-widget bindings;
 - anchors, percentage dimensions, visibility and z-order;
 - declarative `ui.json` interfaces and button actions;
 - visual Scene, Dialogue and UI editors;
@@ -33,6 +53,8 @@ PyNovel Engine is a Python-first visual novel toolkit with readable scripting, v
 - animated `x`, `y`, `scale`, `opacity`, and `rotation` properties;
 - Animation Editor with tracks, keyframes, playhead and live graphical preview;
 - runtime `animation.json` player and `.vn` animation commands;
+- extensible systems, events, state, commands and scene stack;
+- deterministic scheduler and serializable RNG primitives;
 - PyInstaller helper and GitHub Actions build support.
 
 ### Install
@@ -55,37 +77,13 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains **Script**, **Scene**, **Dialogue**, **UI**, **Animation**, and **Assets** workflows. Animation Preview renders project characters on a 1280x720 canvas and updates them from the current timeline playhead.
-
-### Animation timeline
-
-Animations are stored in `animation.json` as tracks containing keyframes. A timeline can animate `x`, `y`, `scale`, `opacity`, and `rotation`.
-
-Play from a script with `play_animation AliceEnter`. The aliases `animation AliceEnter` and `stop_animation AliceEnter` are also supported.
-
-For simple one-off rotation:
-
-```text
-rotate Alice 6 0.25
-```
+The editor contains **Script**, **Scene**, **Dialogue**, **UI**, **Animation**, and **Assets** workflows.
 
 ### Asset pipeline
 
 ```bash
 pynovel assets scan examples/demo
 ```
-
-The generated index is stored at `.pynovel/assets.json` and uses normalized project-relative paths. Assets can be dragged from the Asset Browser onto compatible editor canvases.
-
-### UI editing
-
-- `Ctrl-click`: add/remove a widget from selection;
-- `Delete`: delete selected widgets;
-- `Ctrl+D`: duplicate;
-- `Ctrl+Z` / `Ctrl+Y`: undo / redo;
-- `Ctrl+S`: save;
-- Arrow keys: move by 1 px;
-- Shift + Arrow: move by 10 px.
 
 ### Build
 
@@ -96,37 +94,51 @@ python tools/build.py examples/demo --name MyNovel
 
 Build native bundles separately on Windows, macOS and Linux.
 
+### inhRPG compatibility
+
+See [`docs/INHRPG_SUPPORT.md`](docs/INHRPG_SUPPORT.md) for the compatibility roadmap. `inhRPG` remains a separate project and owns its campaign rules, factions, armies, economy, map content and mini-games.
+
 ---
 
 ## Русский
 
-PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием сцен, диалогов, UI и анимаций, управлением ресурсами, графическим live-preview анимаций и переносимым runtime.
+PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python для Windows, macOS и Linux. Помимо VN-функций, движок предоставляет расширяемый runtime API для внешних игр.
 
-### Текущая версия: 0.28.0
+### Текущая версия: 0.31.0
+
+Внешний проект может использовать `GameSystem`, `EventBus`, `StateRegistry`, `SceneStack`, `CommandRegistry`, `GameScheduler`, `InputMap`, модели карты/pathfinding/selection и `DeterministicRNG`, не добавляя правила конкретной игры в ядро.
+
+### Dynamic UI bindings
+
+`ui.json` может связывать свойства виджетов с явными путями состояния:
+
+```json
+{
+  "bindings": [
+    {"widget": "supplies_label", "property": "text", "state": "strategy.supplies", "transform": "str"},
+    {"widget": "legitimacy_label", "property": "text", "state": "campaign.legitimacy", "transform": "percent"}
+  ]
+}
+```
+
+Поддерживаются преобразования `str`, `int`, `float` и `percent`.
 
 ### Возможности
 
 - человекочитаемый язык сценариев `.vn`;
 - сцены, фоны, персонажи и выражения;
 - диалоги, повествование, выборы, `label` и `jump`;
-- переменные и безопасные выражения с `if / else / endif`;
+- переменные и безопасные выражения;
 - музыка, звуки, ожидания, переходы и tween-анимации;
-- команда `rotate <персонаж> <градусы> <длительность>`;
-- сохранение/загрузка, история, пять слотов и профиль игрока;
-- Title Screen, игровое меню и локализация;
-- UI-компоненты runtime: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
-- anchors, процентные размеры, видимость и `z`-порядок;
-- декларативный `ui.json` и actions кнопок;
-- визуальные редакторы Scene, Dialogue и UI;
-- hierarchy UI с безопасным reparenting и уникальными ID;
-- multi-selection и групповые трансформации;
-- geometry для marquee selection и bounding box групп;
-- Asset Catalog и Asset Browser с поиском, фильтрами, предпросмотром, копированием пути и drag-and-drop;
-- автоматическое создание объектов при переносе ассета на Scene/UI canvas;
-- animation timeline с tracks, keyframes, easing, playback и loop;
-- анимация `x`, `y`, `scale`, `opacity` и `rotation`;
-- Animation Editor с timeline, keyframes, playhead и графическим live-preview;
-- runtime-проигрыватель `animation.json` и команды `.vn` для анимаций;
+- сохранение/загрузка, история, слоты и профиль игрока;
+- локализация и меню;
+- UI-компоненты runtime;
+- динамические привязки state → UI;
+- hierarchy, multi-selection и групповые трансформации;
+- Asset Catalog, Asset Browser и drag-and-drop;
+- animation timeline и графический preview;
+- расширяемые системы, события, состояние, команды и scene stack;
+- deterministic scheduler и serializable RNG;
 - сборка через PyInstaller и GitHub Actions.
 
 ### Установка
@@ -136,60 +148,16 @@ python -m pip install -e .
 pytest
 ```
 
-### Запуск демо
+### Запуск
 
 ```bash
-python -m vnengine run examples/demo
-# или
 pynovel run examples/demo
-```
-
-### Запуск редактора
-
-```bash
 pynovel-editor examples/demo
 ```
 
-В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI**, **Animation** и **Assets**. Animation Preview отображает персонажей проекта на canvas 1280x720 и обновляет их состояние по текущему playhead.
+### Совместимость с inhRPG
 
-### Анимационная timeline
-
-Анимации хранятся в `animation.json` как набор треков с ключевыми кадрами. Можно анимировать `x`, `y`, `scale`, `opacity` и `rotation`.
-
-Запуск из сценария: `play_animation AliceEnter`. Также доступны алиасы `animation AliceEnter` и `stop_animation AliceEnter`.
-
-Для простого плавного поворота:
-
-```text
-rotate Alice 6 0.25
-```
-
-### Управление ресурсами
-
-```bash
-pynovel assets scan examples/demo
-```
-
-Индекс сохраняется в `.pynovel/assets.json`, а пути внутри проекта хранятся в нормализованном относительном виде. Из Asset Browser ассеты можно перетаскивать на совместимые canvas.
-
-### UI Editor
-
-- `Ctrl-клик`: добавить/убрать виджет из выделения;
-- `Delete`: удалить выбранные виджеты;
-- `Ctrl+D`: дублировать;
-- `Ctrl+Z` / `Ctrl+Y`: отмена / возврат;
-- `Ctrl+S`: сохранить;
-- стрелки: перемещение на 1 пиксель;
-- `Shift + Стрелки`: перемещение на 10 пикселей.
-
-### Сборка
-
-```bash
-python -m pip install pyinstaller
-python tools/build.py examples/demo --name MyNovel
-```
-
-Нативные сборки создаются отдельно для Windows, macOS и Linux.
+См. [`docs/INHRPG_SUPPORT.md`](docs/INHRPG_SUPPORT.md). `inhRPG` остаётся отдельным проектом и отвечает за собственные правила кампании, фракции, армии, экономику, карту и мини-игры.
 
 ### Документация
 

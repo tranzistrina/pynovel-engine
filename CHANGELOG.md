@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.35.0
+
+- Added dynamic UI `enabled` state to reusable widgets.
+- Integrated state-to-widget bindings into the main game loop so declarative UI updates from runtime state every frame.
+- Added regression coverage for text, visibility and enabled property bindings.
+- Kept bindings generic and project-defined, with no `inhRPG`-specific rules in the engine.
+
 ## 0.34.0
 
 - Integrated the reusable logical `InputMap` into `ExtensibleRuntime` input dispatch.

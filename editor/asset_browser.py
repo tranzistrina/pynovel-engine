@@ -2,24 +2,39 @@ from __future__ import annotations
 
 from pathlib import Path
 from vnengine.assets.catalog import AssetCatalog, AssetType
+from vnengine.assets.dragdrop import MIME_TYPE, encode_asset_path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QDrag
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QComboBox,
     QListWidget, QListWidgetItem, QLabel, QPushButton, QPlainTextEdit
 )
 
 
+class AssetList(QListWidget):
+    """Asset list that advertises project-relative paths for drag-and-drop targets."""
+
+    def startDrag(self, supportedActions):
+        item = self.currentItem()
+        if item is None:
+            return
+        payload = encode_asset_path(str(item.data(Qt.UserRole)))
+        mime = self.mimeData([item])
+        mime.setData(MIME_TYPE, payload.encode("utf-8"))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+        drag.exec(Qt.CopyAction)
+
+
 class AssetBrowser(QWidget):
-    """Project asset browser with filtering, preview and path copy."""
+    """Project asset browser with filtering, preview, path copy and drag support."""
 
     def __init__(self, project: str | Path):
         super().__init__()
         self.project = Path(project)
         self.catalog = AssetCatalog(self.project)
         self.entries = []
-
         root = QHBoxLayout(self)
         left = QVBoxLayout()
         toolbar = QHBoxLayout()
@@ -37,11 +52,12 @@ class AssetBrowser(QWidget):
         scan.clicked.connect(self.scan)
         toolbar.addWidget(scan)
         left.addLayout(toolbar)
-        self.list = QListWidget()
+        self.list = AssetList()
+        self.list.setDragEnabled(True)
+        self.list.setSelectionMode(QListWidget.SingleSelection)
         self.list.itemSelectionChanged.connect(self.preview_selected)
         left.addWidget(self.list, 1)
         root.addLayout(left, 2)
-
         right = QVBoxLayout()
         self.preview = QLabel("Select an asset")
         self.preview.setAlignment(Qt.AlignCenter)
@@ -55,6 +71,7 @@ class AssetBrowser(QWidget):
         copy_btn = QPushButton("Copy path")
         copy_btn.clicked.connect(self.copy_selected_path)
         right.addWidget(copy_btn)
+        right.addWidget(QLabel("Drag an asset onto Scene or UI canvas."))
         root.addLayout(right, 1)
         self.scan()
 
@@ -87,9 +104,7 @@ class AssetBrowser(QWidget):
         if entry is None:
             return
         absolute = self.project / entry.path
-        self.meta.setPlainText(
-            f"Path: {entry.path}\nType: {entry.asset_type.value}\nSize: {entry.size} bytes"
-        )
+        self.meta.setPlainText(f"Path: {entry.path}\nType: {entry.asset_type.value}\nSize: {entry.size} bytes")
         if entry.asset_type == AssetType.IMAGE:
             pixmap = QPixmap(str(absolute))
             if not pixmap.isNull():
@@ -108,5 +123,4 @@ class AssetBrowser(QWidget):
         items = self.list.selectedItems()
         if not items:
             return
-        path = items[0].data(Qt.UserRole)
-        QApplication.clipboard().setText(path)
+        QApplication.clipboard().setText(str(items[0].data(Qt.UserRole)))

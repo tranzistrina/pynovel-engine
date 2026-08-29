@@ -8,7 +8,7 @@
 
 PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing and a portable runtime.
 
-### Current version: 0.17.0
+### Current version: 0.18.0
 
 ### Current capabilities
 
@@ -30,17 +30,15 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - declarative project UI in `ui.json`;
 - UI button actions such as `new_game`, `menu`, `continue`, `quit` and `jump:<label>`;
 - visual UI Editor with hierarchy, canvas and Inspector;
-- UI Editor undo/redo, duplicate, delete and canvas positioning;
-- resize handle and alignment tools;
+- UI Editor undo/redo, duplicate, delete, canvas positioning and resize;
+- alignment tools and keyboard movement;
 - reusable UI hierarchy model with safe reparenting between `Panel` containers;
 - clone operations with unique IDs;
 - group translation and sequential z-order helpers;
 - shared multi-selection model;
 - Ctrl-click multi-selection in the UI canvas and hierarchy;
-- group move, duplicate and delete operations;
-- reparent selected widgets into a target `Panel`;
-- group z-order assignment;
-- keyboard movement with arrows and Shift for larger steps;
+- group move, duplicate, delete and reparent operations;
+- reusable rectangle-selection geometry helpers for editor tooling;
 - visual Scene Editor;
 - visual Dialogue Graph Editor;
 - graph-to-`.vn` compiler;
@@ -72,6 +70,8 @@ The editor contains Script, Scene, Dialogue and UI workflows.
 ### UI Editor
 
 The UI tab provides a visual canvas for `ui.json`. Create widgets, select one or many from the hierarchy or canvas, edit the active widget in Inspector, move and resize it, duplicate or delete selections, reparent widgets into `Panel` containers, then save.
+
+Reusable editor geometry includes normalized rectangle selection and intersection helpers for future marquee selection tools.
 
 Keyboard shortcuts:
 
@@ -155,7 +155,7 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
 
-### Текущая версия: 0.17.0
+### Текущая версия: 0.18.0
 
 ### Возможности
 
@@ -178,15 +178,11 @@ PyNovel Engine — кроссплатформенный движок и реда
 - действия UI-кнопок `new_game`, `menu`, `continue`, `quit` и `jump:<label>`;
 - визуальный UI Editor с деревом, canvas и Inspector;
 - Undo/Redo, Duplicate, Delete, перемещение и изменение размера;
-- отдельная модель hierarchy с безопасным reparenting между `Panel`;
-- клонирование с уникальными ID;
-- групповой сдвиг и назначение `z`-порядка;
+- безопасный reparenting между контейнерами `Panel`;
+- групповое перемещение, дублирование, удаление и назначение `z`;
 - общая модель multi-selection;
-- Ctrl-клик для выделения нескольких виджетов на canvas и в hierarchy;
-- групповые перемещение, дублирование и удаление;
-- перенос выбранных виджетов в целевой `Panel`;
-- назначение общего диапазона `z` для группы;
-- перемещение стрелками с шагом 1 или 10 пикселей;
+- Ctrl-клик для выделения нескольких виджетов;
+- переиспользуемые helper-функции геометрии рамки выделения;
 - визуальный Scene Editor;
 - визуальный Dialogue Graph Editor;
 - компиляция графа в `.vn`;
@@ -213,9 +209,13 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**. Во вкладке UI можно выделять один или несколько компонентов в дереве и на canvas, менять свойства активного элемента, перемещать, дублировать, удалять и переносить элементы в контейнеры `Panel`.
+В редакторе есть вкладки **Script**, **Scene**, **Dialogue** и **UI**.
 
 ### UI Editor
+
+Во вкладке UI можно визуально собирать `ui.json`: создавать компоненты, выделять один или несколько элементов в дереве или на canvas, менять свойства в Inspector, перемещать, изменять размер, дублировать и удалять элементы, переносить их между контейнерами `Panel` и сохранять результат.
+
+В отдельном editor-слое есть переиспользуемая геометрия для рамки выделения и проверки пересечений, чтобы следующие canvas-инструменты не были жёстко пришиты к Qt.
 
 Горячие клавиши:
 

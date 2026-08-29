@@ -1,18 +1,30 @@
 from __future__ import annotations
 from typing import Any
 from .project import ProjectLoader
-from .scene_registry import SceneRegistry
+from .scene_registry import SceneRegistry, SceneContext
 from .scene_stack import SceneStack
 from .transition import TransitionManager
 
 
 class ProjectRuntime:
     """Lifecycle wrapper for data-driven projects with extensible scenes."""
-    def __init__(self, project: str, *, emit=None, scenes: SceneRegistry | None = None):
+    def __init__(self, project: str, *, emit=None, scenes: SceneRegistry | None = None, viewport: Any = None, frontend: Any = None):
         self.project = ProjectLoader(project); self.emit = emit or (lambda name, data: None)
         self.scenes = scenes or SceneRegistry(); self.stack = SceneStack(); self.transitions = TransitionManager()
+        self.viewport = viewport; self.frontend = frontend
         self.world = None; self.scene_id: str | None = None; self.scene: Any = None; self.running = False
-        if not self.scenes.has("map"): self.scenes.register("map", lambda context: context.runtime.project.load_map(emit=context.runtime.emit))
+        if not self.scenes.has("map"):
+            self.scenes.register("map", self._create_map_scene)
+
+    def _create_map_scene(self, context: SceneContext) -> Any:
+        from .map.loader import load_playable_map
+        from .map.scene import MapScene
+        path = context.runtime.project.root / "map.json"
+        game_map = load_playable_map(path, emit=context.runtime.emit)
+        viewport = context.runtime.viewport
+        if viewport is None and context.runtime.frontend is not None: viewport = context.runtime.frontend.screen.get_rect()
+        if viewport is None: raise RuntimeError("Map scene requires a viewport")
+        return MapScene(game_map, viewport, pygame_module=getattr(context.runtime.frontend, "_pygame", None), emit=context.runtime.emit)
 
     def start(self, *, transition: tuple[str, float] | None = None) -> None:
         self.switch_scene(self.project.manifest.start_scene, transition=transition); self.running = True

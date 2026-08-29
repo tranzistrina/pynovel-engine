@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.27.0
+
+- Added lightweight `AnimationPreview` model independent of Qt/Pygame.
+- Added live preview of timeline targets in the Animation Editor.
+- Playhead changes now immediately update previewed `x`, `y`, `scale`, `opacity` and `rotation` values.
+- Added Play/Pause/Stop preview controls with a 60 Hz editor timer.
+- Added animation preview regression tests.
+- Updated the main bilingual README for 0.27.0.
+
 ## 0.26.0
 
 - Added character `rotation` to the shared runtime model.

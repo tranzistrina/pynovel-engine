@@ -17,7 +17,7 @@ from vnengine.map.movement import MovementController
 class ExtensibleRuntime(CoreRuntime):
     """Core Runtime with opt-in project extension primitives."""
 
-    ENGINE_VERSION = "0.34.0"
+    ENGINE_VERSION = "0.35.0"
 
     def __init__(self, story, asset_root):
         super().__init__(story, asset_root)
@@ -35,6 +35,7 @@ class ExtensibleRuntime(CoreRuntime):
     def unregister_system(self, name: str) -> None: self.systems.unregister(name)
     def register_command(self, name: str, handler) -> None: self.commands.register(name, handler)
     def unregister_command(self, name: str) -> None: self.commands.unregister(name)
+    def command_names(self) -> tuple[str, ...]: return self.commands.names()
     def subscribe(self, event_name: str, callback, priority: int = 0): return self.event_bus.subscribe(event_name, callback, priority)
     def unsubscribe(self, subscription) -> None: self.event_bus.unsubscribe(subscription)
     def emit(self, event_name: str, data: dict[str, Any] | None = None) -> bool: return self.event_bus.emit(event_name, data)
@@ -136,6 +137,7 @@ class ExtensibleRuntime(CoreRuntime):
             if self.state.conditional_stack and not all(self.state.conditional_stack) and action.kind not in ("if", "else", "endif"): continue
             extension = self._extension_handlers.get(action.kind)
             if extension is not None: extension(action)
+            elif self.commands.dispatch(action.kind, self, action): pass
             else:
                 handler = self._handlers.get(action.kind)
                 if handler is None: raise RuntimeError(f"No runtime handler for action: {action.kind}")

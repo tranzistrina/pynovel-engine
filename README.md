@@ -13,10 +13,12 @@ Python-first visual novel engine targeting Windows, macOS and Linux.
 - music, sounds, waits and transitions
 - character expressions plus `expression`, `move`, and `scale` commands
 - eased character position and scale tweening
-- save/load state with background, characters and history
+- save/load state with background, characters, expressions and history
 - in-game menu with Resume, New Game, Save, Load, History and Settings
 - five save slots
-- persistent text speed and volume settings
+- persistent player profile (`profile.json`) with language, text speed, volume and fullscreen preference
+- title screen with New Game / Continue / Load / Settings / Quit
+- Russian and English UI localization
 - mouse and keyboard menu navigation
 - Auto and Skip modes
 - resizable window and F11 fullscreen
@@ -26,7 +28,7 @@ Python-first visual novel engine targeting Windows, macOS and Linux.
 - visual Dialogue graph editor with nodes and links
 - dialogue graph JSON saved independently from the compiled script
 - graph-to-`.vn` compiler with validation of missing targets
-- pytest coverage for parser, expressions, scene data, dialogue graphs and menu logic
+- pytest coverage for parser, expressions, scene data, dialogue graphs, menu and profile persistence
 - PyInstaller build helper and GitHub Actions matrix
 
 ## Install

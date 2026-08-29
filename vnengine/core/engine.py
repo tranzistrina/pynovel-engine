@@ -8,6 +8,7 @@ from vnengine.core.expressions import evaluate
 from vnengine.core.model import Action, SaveState, Story, Character
 from vnengine.core.save import read_save, write_save
 from vnengine.animation.tween import Tween
+from vnengine.animation.timeline_runtime import TimelinePlayer
 
 POSITIONS = {"left": 23.0, "center": 50.0, "right": 77.0}
 
@@ -19,13 +20,16 @@ class GameState:
         self.text_progress = 0.0; self.auto_mode = False; self.skip_mode = False; self.wait_until = 0.0
         self.transition_until = 0.0; self.transition_name = "none"; self.conditional_stack = []
         self.settings = {"text_speed": 42.0, "volume": 0.8, "fullscreen": False}; self.animations = {}
+        self.timeline_player = None
 
 class Runtime:
     def __init__(self, story: Story, asset_root: str | Path):
         self.state = GameState(story); self.asset_root = Path(asset_root); self._image_cache = {}; self._sound_cache = {}
+        self.state.timeline_player = TimelinePlayer(self.asset_root)
         self._handlers: dict[str, Callable[[Action], None]] = {
             "background": self._background, "character": self._character, "expression": self._expression,
-            "move": self._move, "scale": self._scale, "music": self._music, "music_stop": self._music_stop,
+            "move": self._move, "scale": self._scale, "play_animation": self._play_animation,
+            "stop_animation": self._stop_animation, "music": self._music, "music_stop": self._music_stop,
             "sound": self._sound, "say": self._say, "set": self._set, "jump": self._jump, "if": self._if,
             "else": self._else, "endif": self._endif, "choice": self._choice, "wait": self._wait,
             "transition": self._transition, "end": self._end, "scene": lambda a: None,
@@ -67,6 +71,15 @@ class Runtime:
         char = self.state.characters.get(a.data["name"])
         if not char: return
         self.state.animations.setdefault(char.name, {})["scale"] = Tween(char.scale, float(a.data["scale"]), float(a.data.get("duration", .35)))
+    def _play_animation(self, a):
+        if self.state.timeline_player: self.state.timeline_player.play(a.data["name"])
+    def _stop_animation(self, a):
+        if self.state.timeline_player: self.state.timeline_player.stop(a.data["name"])
+    def _apply_timeline_updates(self, updates):
+        for _name, values in updates.items():
+            for (target, prop), value in values.items():
+                char = self.state.characters.get(target)
+                if char and prop in {"x", "y", "scale", "opacity"}: setattr(char, prop, float(value))
     def update(self, dt):
         finished=[]
         for name,props in list(self.state.animations.items()):
@@ -75,6 +88,7 @@ class Runtime:
             for prop,tween in props.items(): setattr(char,prop,tween.step(dt))
             if all(t.done for t in props.values()): finished.append(name)
         for name in finished:self.state.animations.pop(name,None)
+        if self.state.timeline_player:self._apply_timeline_updates(self.state.timeline_player.update(dt))
     def _music(self,a):
         try: pygame.mixer.music.load(self.asset(a.data["path"])); pygame.mixer.music.set_volume(float(self.state.settings["volume"])); pygame.mixer.music.play(-1)
         except pygame.error: pass
@@ -119,7 +133,7 @@ class Runtime:
             self._handlers[action.kind](action)
             if action.kind in ("say","choice","end"):break
     def new_game(self):
-        story=self.state.story; self.state=GameState(story); self._image_cache.clear(); self._sound_cache.clear(); self.apply_scene_manifest(); self.advance()
+        story=self.state.story; self.state=GameState(story); self.state.timeline_player=TimelinePlayer(self.asset_root); self._image_cache.clear(); self._sound_cache.clear(); self.apply_scene_manifest(); self.advance()
     def save(self,path):
         write_save(path,SaveState(self.state.index,self.state.variables,self.state.history,self.state.background_path,{k:{"image":v.image,"position":v.position,"visible":v.visible,"x":v.x,"y":v.y,"scale":v.scale,"opacity":v.opacity,"expression":v.expression} for k,v in self.state.characters.items()}))
     def load(self,path):

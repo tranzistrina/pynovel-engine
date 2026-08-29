@@ -6,9 +6,9 @@
 
 ## English
 
-PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI/animation editing, asset management, and a portable runtime.
+PyNovel Engine is a Python-first visual novel toolkit with readable scripting, visual scene/dialogue/UI/animation editing, asset management, live animation preview, and a portable runtime.
 
-### Current version: 0.26.0
+### Current version: 0.27.0
 
 ### Features
 
@@ -30,15 +30,14 @@ PyNovel Engine is a Python-first visual novel toolkit with readable scripting, v
 - Asset Catalog with image, audio, video, font, data, script and other resource types;
 - persistent `.pynovel/assets.json` project asset index;
 - `pynovel assets scan <project>` resource scanning command;
-- Asset Browser with search, type filtering, image/text preview and path copy;
-- shared asset drag-and-drop protocol;
+- Asset Browser with search, type filtering, image/text preview, path copy and drag-and-drop;
 - dropping image assets into Scene creates character objects;
 - dropping image assets into UI creates image widgets;
 - animation timeline with tracks, keyframes, easing, play/pause/stop/seek and loop;
 - animated numeric properties including `x`, `y`, `scale`, `opacity`, and `rotation`;
-- Animation Editor with timeline, tracks, keyframe editing and playhead;
+- Animation Editor with timeline, tracks, keyframe editing and live preview;
 - runtime timeline player for `animation.json`;
-- `.vn` commands `play_animation`, `animation` and `stop_animation`;
+- `.vn` commands `play_animation`, `animation`, `stop_animation` and `rotate`;
 - PyInstaller helper and GitHub Actions build support.
 
 ### Install
@@ -61,7 +60,7 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-The editor contains **Script**, **Scene**, **Dialogue**, **UI**, **Animation**, and **Assets** workflows.
+The editor contains **Script**, **Scene**, **Dialogue**, **UI**, **Animation**, and **Assets** workflows. The Animation Editor includes live transform preview driven by the current playhead.
 
 ### Asset pipeline
 
@@ -82,11 +81,10 @@ Animations are stored in `animation.json` as tracks containing keyframes. A sing
   "tracks": [
     {
       "target": "Alice",
-      "property": "rotation",
+      "property": "x",
       "keys": [
-        {"time": 0.0, "value": -4.0, "easing": "ease_out"},
-        {"time": 0.35, "value": 4.0, "easing": "ease_in_out"},
-        {"time": 0.7, "value": 0.0, "easing": "ease_out"}
+        {"time": 0.0, "value": 0.0, "easing": "ease_out"},
+        {"time": 0.6, "value": 50.0, "easing": "ease_in_out"}
       ]
     }
   ]
@@ -94,6 +92,8 @@ Animations are stored in `animation.json` as tracks containing keyframes. A sing
 ```
 
 Play it from a script with `play_animation AliceEnter`. The aliases `animation AliceEnter` and `stop_animation AliceEnter` are also supported.
+
+The Animation Editor can move the playhead, play/pause/stop the preview, and display live `x`, `y`, `scale`, `opacity`, and `rotation` values for timeline targets.
 
 For simple one-off motion, use:
 
@@ -126,9 +126,9 @@ Build native bundles separately on Windows, macOS and Linux.
 
 ## Русский
 
-PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием сцен, диалогов, UI и анимаций, управлением ресурсами и переносимым runtime.
+PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием сцен, диалогов, UI и анимаций, управлением ресурсами, live-preview анимаций и переносимым runtime.
 
-### Текущая версия: 0.26.0
+### Текущая версия: 0.27.0
 
 ### Возможности
 
@@ -146,12 +146,16 @@ PyNovel Engine — кроссплатформенный движок и реда
 - визуальные редакторы Scene, Dialogue и UI;
 - hierarchy UI с безопасным reparenting и уникальными ID;
 - multi-selection и групповые трансформации;
+- геометрия рамки выделения и bounding box группы;
 - Asset Catalog, индекс `.pynovel/assets.json` и Asset Browser;
-- общий drag-and-drop протокол ассетов между canvas редактора;
+- drag-and-drop ассетов между canvas редактора;
+- перетаскивание изображения в Scene автоматически создаёт персонажа;
+- перетаскивание изображения в UI автоматически создаёт `Image`;
 - animation timeline с tracks, keyframes, easing, loop и seek;
 - анимация `x`, `y`, `scale`, `opacity` и `rotation`;
-- Animation Editor и runtime-проигрыватель `animation.json`;
-- команды `.vn` `play_animation`, `animation` и `stop_animation`;
+- Animation Editor с live-preview по текущему playhead;
+- runtime-проигрыватель `animation.json`;
+- команды `.vn` `play_animation`, `animation`, `stop_animation` и `rotate`;
 - сборка через PyInstaller и GitHub Actions.
 
 ### Установка
@@ -175,7 +179,7 @@ pynovel run examples/demo
 pynovel-editor examples/demo
 ```
 
-В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI**, **Animation** и **Assets**.
+В редакторе есть рабочие области **Script**, **Scene**, **Dialogue**, **UI**, **Animation** и **Assets**. В Animation Editor текущий playhead сразу обновляет значения трансформации выбранных объектов.
 
 ### Управление ресурсами
 
@@ -187,7 +191,7 @@ pynovel assets scan examples/demo
 
 ### Анимационная timeline
 
-Анимации хранятся в `animation.json` как набор треков с ключевыми кадрами. Например, можно анимировать поворот персонажа:
+Анимации хранятся в `animation.json` как набор треков с ключевыми кадрами. Например:
 
 ```json
 {
@@ -196,11 +200,10 @@ pynovel assets scan examples/demo
   "tracks": [
     {
       "target": "Alice",
-      "property": "rotation",
+      "property": "x",
       "keys": [
-        {"time": 0.0, "value": -4.0, "easing": "ease_out"},
-        {"time": 0.35, "value": 4.0, "easing": "ease_in_out"},
-        {"time": 0.7, "value": 0.0, "easing": "ease_out"}
+        {"time": 0.0, "value": 0.0, "easing": "ease_out"},
+        {"time": 0.6, "value": 50.0, "easing": "ease_in_out"}
       ]
     }
   ]
@@ -208,6 +211,8 @@ pynovel assets scan examples/demo
 ```
 
 Запуск из сценария: `play_animation AliceEnter`. Также доступны алиасы `animation AliceEnter` и `stop_animation AliceEnter`.
+
+В Animation Editor можно двигать playhead, запускать/останавливать preview и вживую видеть `x`, `y`, `scale`, `opacity` и `rotation` целевых объектов.
 
 Для простой одноразовой анимации можно использовать:
 

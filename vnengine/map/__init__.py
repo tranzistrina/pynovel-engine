@@ -3,6 +3,7 @@ from .box_controller import BoxSelectionController
 from .box_selection import BoxSelector
 from .controller import MapController, MapEvent
 from .interaction import MapAction, MapInteraction
+from .entities import EntityRegistry, MapEntity
 from .model import Camera2D, MapConnection, MapDefinition, MapNode, MapPoint
 from .movement import Movement, MovementController
 from .movement_command import MovementCommand, MovementOrder
@@ -13,4 +14,5 @@ from .pathfinding import Route, shortest_path
 from .route_builder import RouteBuilder, RouteRequest
 from .selection import Selectable, SelectionModel
 from .surface import MapMarker, MapSurface
-__all__ = ["Camera2D","MapConnection","MapDefinition","MapNode","MapPoint","Route","shortest_path","RouteBuilder","RouteRequest","Movement","MovementController","MovementCommand","MovementOrder","MovementPolicy","TerrainPolicy","TerrainRules","terrain_for","connection_terrain","Selectable","SelectionModel","MultiSelection","SelectionChange","MapController","MapEvent","MapAction","MapInteraction","BoxSelector","BoxSelectionController","MapMarker","MapSurface"]
+from .world import MapWorld
+__all__ = ["Camera2D","MapConnection","MapDefinition","MapNode","MapPoint","Route","shortest_path","RouteBuilder","RouteRequest","Movement","MovementController","MovementCommand","MovementOrder","MovementPolicy","TerrainPolicy","TerrainRules","terrain_for","connection_terrain","EntityRegistry","MapEntity","MapWorld","Selectable","SelectionModel","MultiSelection","SelectionChange","MapController","MapEvent","MapAction","MapInteraction","BoxSelector","BoxSelectionController","MapMarker","MapSurface"]

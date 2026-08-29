@@ -8,7 +8,7 @@
 
 PyNovel Engine is a Python-first visual novel toolkit focused on readable scripting, visual editing and a portable runtime.
 
-### Current version: 0.14.0
+### Current version: 0.15.0
 
 ### Current capabilities
 
@@ -28,14 +28,14 @@ PyNovel Engine is a Python-first visual novel toolkit focused on readable script
 - runtime UI widgets: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
 - anchors, percentage dimensions, visibility and `z` ordering;
 - declarative project UI in `ui.json`;
-- UI button actions such as `new_game`, `menu`, `continue`, `quit` and `jump:<label>`;
+- clickable UI actions including `new_game`, `menu`, `continue`, `quit` and `jump:<label>`;
 - visual UI Editor with hierarchy, canvas and Inspector;
-- UI Editor undo/redo, duplicate and delete;
-- UI canvas drag-and-drop positioning;
-- resize handle on the selected UI widget;
-- alignment tools: Center X, Center Y, Center, Top and Left;
-- keyboard movement with arrows and Shift for larger steps;
-- keyboard shortcuts: Delete, Ctrl+D, Ctrl+Z, Ctrl+Y, Ctrl+S;
+- UI Editor undo/redo, duplicate, delete and canvas positioning;
+- resize handle and alignment tools;
+- reusable UI hierarchy model with safe reparenting between `Panel` containers;
+- clone operations with unique IDs;
+- group translation and sequential z-order helpers;
+- keyboard shortcuts;
 - visual Scene Editor;
 - visual Dialogue Graph Editor;
 - graph-to-`.vn` compiler;
@@ -66,7 +66,9 @@ The editor contains Script, Scene, Dialogue and UI workflows.
 
 ### UI Editor
 
-The UI tab provides a visual canvas for `ui.json`. Create a widget from the left panel, select it from the hierarchy or canvas, edit its properties in Inspector, then save.
+The UI tab provides a visual canvas for `ui.json`. Create widgets, select them from the hierarchy or canvas, edit them in Inspector, move and resize them, then save.
+
+The hierarchy model also provides safe reparenting between `Panel` containers, cloning with unique IDs, group translation and sequential z-order assignment.
 
 Keyboard shortcuts:
 
@@ -77,8 +79,6 @@ Keyboard shortcuts:
 - `Ctrl+S`: save
 - `Arrow keys`: move by 1 pixel
 - `Shift + Arrow`: move by 10 pixels
-
-The selected widget can be resized by dragging the lower-right handle and aligned with the Inspector tools.
 
 ### UI example
 
@@ -151,7 +151,7 @@ Native bundles are built separately on Windows, macOS and Linux.
 
 PyNovel Engine — кроссплатформенный движок и редактор визуальных новелл на Python с понятным языком сценариев, визуальным редактированием и переносимым runtime.
 
-### Текущая версия: 0.14.0
+### Текущая версия: 0.15.0
 
 ### Возможности
 
@@ -171,14 +171,14 @@ PyNovel Engine — кроссплатформенный движок и реда
 - UI-компоненты runtime: `Panel`, `Label`, `Image`, `TextBox`, `Button`;
 - anchors, процентные размеры, видимость и `z`-порядок;
 - декларативный интерфейс проекта в `ui.json`;
-- действия кнопок `new_game`, `menu`, `continue`, `quit` и `jump:<label>`;
+- действия UI-кнопок `new_game`, `menu`, `continue`, `quit` и `jump:<label>`;
 - визуальный UI Editor с деревом, canvas и Inspector;
-- Undo/Redo, Duplicate и Delete;
-- перемещение виджетов мышью на canvas;
-- resize handle у выбранного виджета;
-- инструменты выравнивания Center X, Center Y, Center, Top и Left;
-- перемещение стрелками с шагом 1 или 10 пикселей;
-- горячие клавиши `Delete`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+S`;
+- Undo/Redo, Duplicate, Delete и перемещение на canvas;
+- resize handle и инструменты выравнивания;
+- отдельная модель UI hierarchy с безопасным переносом между контейнерами `Panel`;
+- клонирование с уникальными ID;
+- групповой сдвиг и последовательное назначение `z`-порядка;
+- горячие клавиши;
 - визуальный Scene Editor;
 - визуальный Dialogue Graph Editor;
 - компиляция графа в `.vn`;
@@ -209,7 +209,9 @@ pynovel-editor examples/demo
 
 ### UI Editor
 
-Во вкладке UI можно визуально собирать `ui.json`: создавать виджеты, выбирать их в дереве или на canvas, менять свойства в Inspector и сохранять результат.
+Во вкладке UI можно визуально собирать `ui.json`: создавать компоненты, выбирать их в дереве или на canvas, менять свойства в Inspector, перемещать и изменять размер, а затем сохранять результат.
+
+Модель hierarchy поддерживает безопасный перенос элементов между контейнерами `Panel`, клонирование с уникальными ID, групповой сдвиг и последовательное назначение `z`-порядка.
 
 Горячие клавиши:
 
@@ -220,8 +222,6 @@ pynovel-editor examples/demo
 - `Ctrl+S`: сохранить;
 - `Стрелки`: перемещение на 1 пиксель;
 - `Shift + Стрелки`: перемещение на 10 пикселей.
-
-Размер выбранного виджета можно менять перетаскиванием нижнего правого resize handle. В Inspector доступны инструменты выравнивания.
 
 ### Пример UI
 
@@ -249,7 +249,7 @@ pynovel-editor examples/demo
 
 ### Тема интерфейса
 
-Положите `theme.json` в корень проекта, чтобы настраивать оформление без изменения кода движка.
+В корень проекта можно положить `theme.json`, чтобы менять оформление без изменения кода движка.
 
 ### Локализация
 

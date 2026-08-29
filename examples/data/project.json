@@ -1,0 +1,6 @@
+{
+  "name": "Playable Map Demo",
+  "version": "1.0",
+  "map_path": "map.json",
+  "start_scene": "map"
+}

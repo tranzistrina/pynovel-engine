@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
+
 from .model import MapDefinition, MapPoint
 from .route_builder import RouteBuilder
 from .world import MapWorld
@@ -15,11 +17,16 @@ class MapSelectionHit:
 
 class PlayableMap:
     """Engine-side playable map coordinator, independent of a specific game."""
+
     def __init__(self, definition: MapDefinition, *, emit=None, hit_radius: float = 24.0):
         self.world = MapWorld(definition, emit)
-        self.routes = RouteBuilder(definition)
+        self.routes = RouteBuilder(definition, entity_resolver=self._entity_node)
         self.controller = MapWorldController(self.world, self.routes, emit)
         self.hit_radius = float(hit_radius)
+
+    def _entity_node(self, entity_id: str) -> str | None:
+        entity = self.world.entities.get(entity_id)
+        return None if entity is None else entity.node_id
 
     def add_entity(self, entity_id: str, node_id: str, **kwargs: Any):
         return self.world.add_entity(entity_id, node_id, **kwargs)

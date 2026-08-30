@@ -1,5 +1,8 @@
 from __future__ import annotations
+
+import json
 from typing import Any
+
 from .project import ProjectLoader
 from .scene_registry import SceneRegistry, SceneContext
 from .scene_stack import SceneStack
@@ -13,14 +16,28 @@ class ProjectRuntime:
         self.scenes = scenes or SceneRegistry(); self.stack = SceneStack(); self.transitions = TransitionManager()
         self.viewport = viewport; self.frontend = frontend
         self.world = None; self.scene_id: str | None = None; self.scene: Any = None; self.running = False
-        if not self.scenes.has("map"):
-            self.scenes.register("map", self._create_map_scene)
+        if not self.scenes.has("map"): self.scenes.register("map", self._create_map_scene)
+        self._register_project_scenes()
+
+    def _register_project_scenes(self) -> None:
+        path = self.project.root / "scenes.json"
+        if not path.is_file(): return
+        try: definitions = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError): return
+        if not isinstance(definitions, dict): return
+        for scene_id, definition in definitions.items():
+            if not isinstance(scene_id, str) or not isinstance(definition, dict) or self.scenes.has(scene_id): continue
+            self.scenes.register(scene_id, lambda context, definition=definition: self._create_declarative_scene(definition, context))
+
+    @staticmethod
+    def _create_declarative_scene(definition: dict[str, Any], context: SceneContext) -> Any:
+        from .declarative_scene import DeclarativeScene
+        return DeclarativeScene(definition, context.runtime)
 
     def _create_map_scene(self, context: SceneContext) -> Any:
         from .map.loader import load_playable_map
         from .map.scene import MapScene
-        path = context.runtime.project.root / "map.json"
-        game_map = load_playable_map(path, emit=context.runtime.emit)
+        game_map = load_playable_map(context.runtime.project.map_path, emit=context.runtime.emit)
         viewport = context.runtime.viewport
         if viewport is None and context.runtime.frontend is not None: viewport = context.runtime.frontend.screen.get_rect()
         if viewport is None: raise RuntimeError("Map scene requires a viewport")
@@ -54,8 +71,7 @@ class ProjectRuntime:
 
     def handle_input(self, event: Any) -> bool:
         if not self.running or self.scene is None: return False
-        handler = getattr(self.scene, "handle_input", None)
-        return bool(handler(event)) if callable(handler) else False
+        handler = getattr(self.scene, "handle_input", None); return bool(handler(event)) if callable(handler) else False
 
     def render(self, target: Any) -> None:
         if self.scene is None: return

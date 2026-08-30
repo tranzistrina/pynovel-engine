@@ -10,6 +10,7 @@ from vnengine.project_runtime import ProjectRuntime
 from vnengine.frontends.pygame import PygameFrontend
 from vnengine.agent import AIAgentInterface
 from vnengine.dsl import GameDSL, DSLParseError
+from vnengine.test_runner import HeadlessTestRunner
 
 
 def _is_data_project(project: Path) -> bool:
@@ -58,10 +59,22 @@ def _dsl_command(args: argparse.Namespace) -> None:
         raise SystemExit(2) from exc
 
 
+def _test_command(args: argparse.Namespace) -> int:
+    runner = HeadlessTestRunner(args.project)
+    if args.spec:
+        cases = runner.load_cases(args.spec)
+    else:
+        cases = runner.load_cases(args.project / "tests.json") if (args.project / "tests.json").is_file() else runner.load_cases(Path(__file__).parents[1] / "tests" / "specs" / "smoke.json")
+    result = runner.run(cases)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result["failed"] == 0 else 1
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="pynovel", description="Run and inspect a PyNovel project")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run a project"); run.add_argument("project", type=Path)
+    test = sub.add_parser("test", help="run deterministic headless project tests"); test.add_argument("project", type=Path); test.add_argument("--spec", type=Path, default=None)
     dsl = sub.add_parser("dsl", help="compile or validate declarative game files")
     dsl_sub = dsl.add_subparsers(dest="dsl_action", required=True)
     compile_cmd = dsl_sub.add_parser("compile", help="compile a .game file into project files"); compile_cmd.add_argument("source", type=Path); compile_cmd.add_argument("output", type=Path)
@@ -79,6 +92,7 @@ def main() -> None:
     if args.command == "run":
         if _is_data_project(args.project): _run_data_project(args.project)
         else: Game(args.project).run()
+    elif args.command == "test": raise SystemExit(_test_command(args))
     elif args.command == "dsl": _dsl_command(args)
     elif args.command == "assets" and args.assets_command == "scan":
         catalog = AssetCatalog(args.project); entries = catalog.scan(); index_path = catalog.write_index(); counts = {asset_type.value: len(catalog.by_type(asset_type)) for asset_type in AssetType}

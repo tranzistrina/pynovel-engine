@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any
+from vnengine.components import ComponentRegistry
 from .entities import EntityRegistry, MapEntity
 from .movement import MovementController
 from .model import MapDefinition
@@ -8,11 +9,19 @@ from .selection import SelectionModel
 
 class MapWorld:
     """Runtime container joining map data, entities, selection and movement."""
-    def __init__(self, definition: MapDefinition, emit=None):
-        self.definition = definition; self.entities = EntityRegistry(); self.selection = SelectionModel(); self.movement = MovementController(definition, emit)
+    def __init__(self, definition: MapDefinition, emit=None, *, components: ComponentRegistry | None = None):
+        self.definition = definition
+        self.components = components or ComponentRegistry()
+        self.entities = EntityRegistry(component_registry=self.components)
+        self.selection = SelectionModel()
+        self.movement = MovementController(definition, emit)
 
     def add_entity(self, entity_id: str, node_id: str, *, components: dict[str, Any] | None = None, metadata: dict[str, Any] | None = None) -> MapEntity:
-        position = self.definition.node(node_id).position; entity = MapEntity(entity_id, position, node_id, components or {}, metadata or {})
+        position = self.definition.node(node_id).position
+        initial = dict(components or {})
+        for name in list(initial):
+            if self.components.has(name): initial[name] = self.components.create(name, initial[name])
+        entity = MapEntity(entity_id, position, node_id, initial, metadata or {})
         self.entities.add(entity); self.selection.register(entity_id); return entity
 
     def remove_entity(self, entity_id: str) -> MapEntity | None:

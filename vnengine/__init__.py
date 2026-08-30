@@ -1,6 +1,7 @@
 __version__ = "0.40.0"
 
 from .runtime_protocol import CoreRuntimeAdapter, ExtensibleRuntimeAdapter, RuntimeProtocol, require_runtime
+from .runtime_adapter import RuntimeAdapter
 
 __all__ = [
     "__version__",
@@ -8,4 +9,5 @@ __all__ = [
     "require_runtime",
     "CoreRuntimeAdapter",
     "ExtensibleRuntimeAdapter",
+    "RuntimeAdapter",
 ]

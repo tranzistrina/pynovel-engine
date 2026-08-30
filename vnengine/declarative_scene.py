@@ -25,18 +25,16 @@ class DeclarativeScene:
     def refresh(self) -> None:
         guard = 0
         while 0 <= self.index < len(self.actions) and guard <= len(self.actions):
-            action = self.actions[self.index]
-            kind = action.get("type") if isinstance(action, dict) else None
+            action = self.actions[self.index]; kind = action.get("type") if isinstance(action, dict) else None
             if kind == "label": self.index += 1
-            elif kind == "set": self.logic.set(str(action["variable"]), action.get("value")); self.index += 1
-            elif kind == "change": self.logic.change(str(action["variable"]), action.get("amount", 1)); self.index += 1
-            elif kind == "emit": self.logic.execute(action); self.index += 1
+            elif kind in {"set", "change", "emit"}:
+                self.logic.execute(action); self.index += 1
             elif kind == "goto": self._goto(action); guard += 1; continue
             elif kind == "if":
-                condition = action.get("condition", {})
+                condition = action.get("condition")
                 branch = action.get("then", []) if self.logic.check(condition) else action.get("else", [])
                 for nested in branch:
-                    if nested.get("type") in {"set", "change", "emit"}: self.logic.execute(nested)
+                    if isinstance(nested, dict): self.logic.execute(nested)
                 self.index += 1
             else:
                 self._refresh_action(); return
@@ -45,8 +43,9 @@ class DeclarativeScene:
 
     def _goto(self, action: dict[str, Any]) -> None:
         target = str(action.get("target", ""))
-        if target not in self.labels: raise ValueError(f"Unknown scene label: {target}")
-        self.index = self.labels[target]
+        if target in self.labels: self.index = self.labels[target]; return
+        if target in self.runtime.scenes.ids(): self.runtime.switch_scene(target); return
+        raise ValueError(f"Unknown scene label or scene: {target}")
 
     def _refresh_action(self) -> None:
         action = self.actions[self.index] if 0 <= self.index < len(self.actions) else {}
@@ -54,18 +53,15 @@ class DeclarativeScene:
         else: self.last_speaker = ""; self.last_text = ""
 
     def _choices(self) -> list[tuple[int, dict[str, Any]]]:
-        return [(i, a) for i, a in enumerate(self.actions) if a.get("type") == "choice" and self.logic.check(a.get("condition"))] if any("condition" in a for a in self.actions if isinstance(a, dict) and a.get("type") == "choice") else [(i, a) for i, a in enumerate(self.actions) if a.get("type") == "choice"]
+        return [(i, a) for i, a in enumerate(self.actions) if a.get("type") == "choice" and self.logic.check(a.get("condition"))]
 
     def _choose(self, number: int) -> bool:
         choices = self._choices()
-        if number < 0 or number >= len(choices): return False
-        _, choice = choices[number]; target = choice.get("target")
-        self.logic.events.append({"type": "choice", "index": number, "text": choice.get("text", "")})
-        if target:
-            target = str(target)
-            if target in self.labels: self.index = self.labels[target]; self.refresh()
-            else: self.runtime.switch_scene(target)
-        else: self.index += 1; self.refresh()
+        if not 0 <= number < len(choices): return False
+        action_index, choice = choices[number]; self.logic.events.append({"type": "choice", "index": number, "action_index": action_index, "text": choice.get("text", "")})
+        target = choice.get("target")
+        if target: self._goto({"target": target})
+        else: self.index = action_index + 1; self.refresh()
         return True
 
     def handle_input(self, event: Any) -> bool:
@@ -90,6 +86,11 @@ class DeclarativeScene:
         if self.pygame is None: return
         width, height = target.get_size(); target.fill(tuple(self.definition.get("background_color", (24, 24, 32))))
         font = self.pygame.font.Font(None, 30); title = self.pygame.font.Font(None, 36)
+        background = self.definition.get("background")
+        if background:
+            try:
+                image = self.pygame.image.load(str(background)).convert(); target.blit(self.pygame.transform.smoothscale(image, (width, height)), (0, 0))
+            except (OSError, self.pygame.error): pass
         if self.last_text:
             panel = self.pygame.Surface((max(1, width - 80), 190), self.pygame.SRCALPHA); panel.fill((0, 0, 0, 190)); target.blit(panel, (40, height - 220))
             y = height - 200
@@ -98,9 +99,7 @@ class DeclarativeScene:
         for i, (_, choice) in enumerate(self._choices()):
             prefix = "> " if i == self.selected_choice else "  "; target.blit(font.render(f"{prefix}{i + 1}. {choice.get('text', '')}", True, (255, 255, 255)), (60, 60 + i * 36))
 
-    def serialize(self) -> dict[str, Any]:
-        return {"index": self.index, "selected_choice": self.selected_choice, "speaker": self.last_speaker, "text": self.last_text}
+    def serialize(self) -> dict[str, Any]: return {"index": self.index, "selected_choice": self.selected_choice, "speaker": self.last_speaker, "text": self.last_text}
 
     def deserialize(self, payload: dict[str, Any]) -> None:
-        self.index = max(0, min(int(payload.get("index", 0)), len(self.actions))); self.selected_choice = max(0, int(payload.get("selected_choice", 0)))
-        self.last_speaker = str(payload.get("speaker", "")); self.last_text = str(payload.get("text", ""))
+        self.index = max(0, min(int(payload.get("index", 0)), len(self.actions))); self.selected_choice = max(0, int(payload.get("selected_choice", 0))); self.last_speaker = str(payload.get("speaker", "")); self.last_text = str(payload.get("text", "")); self.refresh()

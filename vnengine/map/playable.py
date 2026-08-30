@@ -1,18 +1,12 @@
 from __future__ import annotations
-
-from dataclasses import dataclass
 from typing import Any
-
-from .model import MapDefinition, MapPoint
+from .controller import MapController
+from .interaction import MapInteraction
+from .movement import MovementController
 from .route_builder import RouteBuilder
+from .model import MapDefinition, MapPoint
 from .world import MapWorld
 from .world_controller import MapWorldController
-
-
-@dataclass(frozen=True, slots=True)
-class MapSelectionHit:
-    entity_id: str | None = None
-    node_id: str | None = None
 
 
 class PlayableMap:
@@ -24,6 +18,24 @@ class PlayableMap:
         self.controller = MapWorldController(self.world, self.routes, emit)
         self.hit_radius = float(hit_radius)
 
+    @property
+    def definition(self) -> MapDefinition:
+        """Compatibility view of the underlying map definition."""
+        return self.world.definition
+
+    @property
+    def entities(self):
+        """Compatibility view of the underlying entity registry."""
+        return self.world.entities
+
+    @property
+    def selection(self):
+        return self.world.selection
+
+    @property
+    def movement(self):
+        return self.world.movement
+
     def _entity_node(self, entity_id: str) -> str | None:
         entity = self.world.entities.get(entity_id)
         return None if entity is None else entity.node_id
@@ -31,20 +43,25 @@ class PlayableMap:
     def add_entity(self, entity_id: str, node_id: str, **kwargs: Any):
         return self.world.add_entity(entity_id, node_id, **kwargs)
 
-    def hit_test(self, map_position: MapPoint) -> MapSelectionHit:
+    def remove_entity(self, entity_id: str):
+        return self.world.remove_entity(entity_id)
+
+    def hit_test(self, map_position: MapPoint):
         radius2 = self.hit_radius * self.hit_radius
         nearest_entity: tuple[float, str] | None = None
         for entity in self.world.entities.all():
             dx = entity.position.x - map_position.x; dy = entity.position.y - map_position.y; distance2 = dx * dx + dy * dy
             if distance2 <= radius2 and (nearest_entity is None or distance2 < nearest_entity[0]): nearest_entity = (distance2, entity.id)
-        if nearest_entity is not None: return MapSelectionHit(entity_id=nearest_entity[1])
+        if nearest_entity is not None:
+            from .playable import MapSelectionHit
+            return MapSelectionHit(entity_id=nearest_entity[1])
         nearest_node: tuple[float, str] | None = None
         for node in self.world.definition.nodes:
             dx = node.position.x - map_position.x; dy = node.position.y - map_position.y; distance2 = dx * dx + dy * dy
             if distance2 <= radius2 and (nearest_node is None or distance2 < nearest_node[0]): nearest_node = (distance2, node.id)
         return MapSelectionHit(node_id=nearest_node[1]) if nearest_node is not None else MapSelectionHit()
 
-    def select_at(self, map_position: MapPoint, additive: bool = False) -> MapSelectionHit:
+    def select_at(self, map_position: MapPoint, additive: bool = False):
         hit = self.hit_test(map_position)
         if hit.entity_id is not None: self.world.selection.select(hit.entity_id, additive=additive)
         return hit
@@ -53,3 +70,14 @@ class PlayableMap:
     def update(self, dt: float) -> None: self.controller.update(dt)
     def serialize(self) -> dict[str, Any]: return self.world.serialize()
     def deserialize(self, payload: dict[str, Any]) -> None: self.world.deserialize(payload)
+
+
+from dataclasses import dataclass
+
+@dataclass(frozen=True, slots=True)
+class MapSelectionHit:
+    entity_id: str | None = None
+    node_id: str | None = None
+
+
+__all__ = ["PlayableMap", "MapSelectionHit"]

@@ -27,7 +27,7 @@ class Diagnostic:
 
 class AIAgentInterface:
     """Single stable API for AI agents to inspect, plan, mutate and diagnose projects."""
-    API_VERSION = 4
+    API_VERSION = 5
 
     def __init__(self, root: str | Path, *, runtime: Any = None):
         self.root = Path(root).resolve(); self.builder = AIProjectBuilder(self.root)
@@ -42,15 +42,12 @@ class AIAgentInterface:
         return result
 
     def plan(self, operations: list[dict[str, Any]]) -> dict[str, Any]:
-        diagnostics: list[dict[str, Any]] = []
-        specs = {spec.name: spec for spec in BUILDER_COMMANDS}
+        diagnostics: list[dict[str, Any]] = []; specs = {spec.name: spec for spec in BUILDER_COMMANDS}
         for index, operation in enumerate(operations):
             location = f"operations[{index}]"
-            if not isinstance(operation, dict):
-                diagnostics.append(Diagnostic("error", "invalid_operation", "Operation must be an object.", location).to_dict()); continue
+            if not isinstance(operation, dict): diagnostics.append(Diagnostic("error", "invalid_operation", "Operation must be an object.", location).to_dict()); continue
             command = operation.get("command"); spec = specs.get(command)
-            if spec is None:
-                diagnostics.append(Diagnostic("error", "unknown_command", f"Unsupported builder command: {command}", f"{location}.command").to_dict()); continue
+            if spec is None: diagnostics.append(Diagnostic("error", "unknown_command", f"Unsupported builder command: {command}", f"{location}.command").to_dict()); continue
             for name in spec.required:
                 if name not in operation: diagnostics.append(Diagnostic("error", "missing_argument", f"Missing required argument: {name}", f"{location}.{name}").to_dict())
             allowed = set(spec.required) | set(spec.optional) | {"command"}
@@ -62,8 +59,7 @@ class AIAgentInterface:
         plan = self.plan(operations); before = self.builder.document.inspect()
         if not plan["valid"]: return {"committed": False, "applied": 0, "before": before, "preview": before, "plan": plan, "diagnostics": plan["diagnostics"]}
         self.builder.document.begin()
-        try:
-            results = [self.builder._dispatch(op) for op in operations]; preview = self.builder.document.inspect()
+        try: results = [self.builder._dispatch(op) for op in operations]; preview = self.builder.document.inspect()
         except Exception as exc:
             self.builder.document.rollback(); return {"committed": False, "applied": 0, "before": before, "preview": before, "plan": plan, "diagnostics": [self._exception_diagnostic(exc).to_dict()]}
         self.builder.document.rollback(); return {"committed": False, "applied": len(results), "before": before, "preview": preview, "plan": plan, "diagnostics": []}
@@ -86,25 +82,54 @@ class AIAgentInterface:
         except Exception as exc: return {"valid": False, "errors": [Diagnostic("error", "invalid_manifest_json", str(exc), "project.json", "Fix the JSON syntax.").to_dict()], "warnings": []}
         for key in ("name", "version", "map_path", "start_scene"):
             if key not in manifest: errors.append(Diagnostic("error", "missing_manifest_field", f"Manifest field is missing: {key}", "project.json").to_dict())
+        start = manifest.get("start_scene")
         map_path = self.root / str(manifest.get("map_path", "map.json"))
         if not map_path.is_file(): errors.append(Diagnostic("error", "missing_map", "Configured map file is missing.", str(map_path.relative_to(self.root)), "Create a map or correct map_path.").to_dict())
         else: self._validate_map(map_path, errors, warnings)
-        if self.runtime is not None:
-            start = manifest.get("start_scene")
-            if start and not self.runtime.scenes.has(start): errors.append(Diagnostic("error", "unknown_start_scene", f"Start scene is not registered: {start}", "project.json").to_dict())
+        scenes_path = self.root / "scenes.json"
+        if scenes_path.is_file(): self._validate_scenes(scenes_path, start, errors, warnings)
+        elif start and start != "map" and self.runtime is None: errors.append(Diagnostic("error", "missing_scenes", "Non-map start scene requires scenes.json.", "project.json", "Create the start scene.").to_dict())
+        if self.runtime is not None and start and not self.runtime.scenes.has(start): errors.append(Diagnostic("error", "unknown_start_scene", f"Start scene is not registered: {start}", "project.json", "Create the scene or change start_scene.").to_dict())
         return {"valid": not errors, "errors": errors, "warnings": warnings}
 
     def diagnose(self) -> dict[str, Any]:
         validation = self.validate(); diagnostics = validation["errors"] + validation["warnings"]
         return {"valid": validation["valid"], "diagnostics": diagnostics, "next": self._next_steps(validation)}
 
-    def command_schema(self) -> dict[str, Any]:
-        return command_schema()
+    def command_schema(self) -> dict[str, Any]: return command_schema()
+
+    def _validate_scenes(self, path: Path, start: Any, errors: list[dict[str, Any]], warnings: list[dict[str, Any]]) -> None:
+        try: scenes = self._read_json(path)
+        except Exception as exc:
+            errors.append(Diagnostic("error", "invalid_scenes_json", str(exc), "scenes.json", "Fix the JSON syntax.").to_dict()); return
+        if not isinstance(scenes, dict): errors.append(Diagnostic("error", "invalid_scenes", "scenes.json root must be an object.", "scenes.json").to_dict()); return
+        if start and start != "map" and start not in scenes: errors.append(Diagnostic("error", "unknown_start_scene", f"Start scene is not defined: {start}", "project.json", "Define the start scene.").to_dict())
+        for scene_id, scene in scenes.items():
+            location = f"scenes.json.{scene_id}"
+            if not isinstance(scene, dict): errors.append(Diagnostic("error", "invalid_scene", "Scene must be an object.", location).to_dict()); continue
+            actions = scene.get("actions", [])
+            if not isinstance(actions, list): errors.append(Diagnostic("error", "invalid_scene_actions", "Scene actions must be an array.", f"{location}.actions").to_dict()); continue
+            labels: set[str] = set(); refs: list[tuple[str, str, int]] = []
+            for index, action in enumerate(actions):
+                apath = f"{location}.actions[{index}]"
+                if not isinstance(action, dict): errors.append(Diagnostic("error", "invalid_action", "Action must be an object.", apath).to_dict()); continue
+                kind = action.get("type")
+                if kind not in {"say", "choice", "set", "change", "emit", "label", "goto", "character"}: errors.append(Diagnostic("error", "unknown_action", f"Unknown action type: {kind}", f"{apath}.type").to_dict()); continue
+                if kind == "label":
+                    label = action.get("label")
+                    if not label: errors.append(Diagnostic("error", "invalid_label", "Label requires a name.", apath).to_dict())
+                    elif label in labels: errors.append(Diagnostic("error", "duplicate_label", f"Duplicate label: {label}", apath).to_dict())
+                    else: labels.add(str(label))
+                if kind in {"goto", "choice"} and action.get("target"): refs.append((str(action["target"]), kind, index))
+                if kind == "say" and not action.get("text"): warnings.append(Diagnostic("warning", "empty_dialogue", "Dialogue action has empty text.", apath).to_dict())
+            for target, kind, index in refs:
+                if kind == "goto" and target not in labels and target not in scenes: errors.append(Diagnostic("error", "unresolved_goto", f"Goto target is not a label or scene: {target}", f"{location}.actions[{index}].target", "Create the label or use a valid scene id.").to_dict())
+                if kind == "choice" and target not in scenes and target not in labels: errors.append(Diagnostic("error", "unresolved_choice", f"Choice target is not a scene or label: {target}", f"{location}.actions[{index}].target", "Create the target scene or label.").to_dict())
+        if not scenes: warnings.append(Diagnostic("warning", "empty_scenes", "scenes.json contains no scenes.", "scenes.json", "Add at least one scene.").to_dict())
 
     def _validate_map(self, path: Path, errors: list[dict[str, Any]], warnings: list[dict[str, Any]]) -> None:
         try: data = self._read_json(path)
-        except Exception as exc:
-            errors.append(Diagnostic("error", "invalid_map_json", str(exc), str(path.relative_to(self.root)), "Fix the JSON syntax.").to_dict()); return
+        except Exception as exc: errors.append(Diagnostic("error", "invalid_map_json", str(exc), str(path.relative_to(self.root)), "Fix the JSON syntax.").to_dict()); return
         if not isinstance(data, dict): errors.append(Diagnostic("error", "invalid_map", "Map root must be an object.", str(path.relative_to(self.root))).to_dict()); return
         nodes, connections, entities = data.get("nodes", []), data.get("connections", []), data.get("entities", [])
         if not isinstance(nodes, list): errors.append(Diagnostic("error", "invalid_nodes", "nodes must be an array.", "map.json.nodes").to_dict()); nodes = []
@@ -129,8 +154,7 @@ class AIAgentInterface:
         with path.open("r", encoding="utf-8") as handle: return json.load(handle)
 
     @staticmethod
-    def _exception_diagnostic(exc: Exception) -> Diagnostic:
-        return Diagnostic("error", type(exc).__name__.lower(), str(exc) or type(exc).__name__, suggestion="Correct the reported operation and retry.")
+    def _exception_diagnostic(exc: Exception) -> Diagnostic: return Diagnostic("error", type(exc).__name__.lower(), str(exc) or type(exc).__name__, suggestion="Correct the reported operation and retry.")
 
     @staticmethod
     def _next_steps(validation: dict[str, Any]) -> list[str]:

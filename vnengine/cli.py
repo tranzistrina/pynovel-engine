@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from vnengine.assets.catalog import AssetCatalog, AssetType
 from vnengine.runtime import Game
 from vnengine.project_runtime import ProjectRuntime
 from vnengine.frontends.pygame import PygameFrontend
+from vnengine.agent import AIAgentInterface
 
 
 def _is_data_project(project: Path) -> bool:
@@ -15,25 +17,45 @@ def _is_data_project(project: Path) -> bool:
 
 def _run_data_project(project: Path) -> None:
     frontend = PygameFrontend(title=project.name or "PyNovel Engine")
-    frontend.open()
-    runtime = ProjectRuntime(project, frontend=frontend)
+    frontend.open(); runtime = ProjectRuntime(project, frontend=frontend)
     try:
         runtime.viewport = frontend.screen.get_rect()
         from vnengine.project_runner import ProjectRunner
         ProjectRunner(runtime, poll_events=frontend.events, present=frontend.present, target=frontend.screen, clock=frontend.tick).run()
-    finally:
-        frontend.close()
+    finally: frontend.close()
+
+
+def _load_operations(path: Path) -> list[dict]:
+    with path.open("r", encoding="utf-8") as handle: data = json.load(handle)
+    if not isinstance(data, list): raise SystemExit("Operations file must contain a JSON array")
+    return data
+
+
+def _agent_command(args: argparse.Namespace) -> None:
+    agent = AIAgentInterface(args.project)
+    if args.agent_action == "inspect": result = agent.inspect()
+    elif args.agent_action == "validate": result = agent.validate()
+    elif args.agent_action == "diagnose": result = agent.diagnose()
+    elif args.agent_action == "schema": result = agent.command_schema()
+    elif args.agent_action in {"plan", "dry-run", "apply"}:
+        operations = _load_operations(args.operations); result = agent.plan(operations) if args.agent_action == "plan" else agent.execute(operations, dry_run=args.agent_action == "dry-run", save=not args.no_save)
+    else: raise SystemExit(f"Unknown agent action: {args.agent_action}")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="pynovel", description="Run and inspect a PyNovel project")
     sub = parser.add_subparsers(dest="command", required=True)
-    run = sub.add_parser("run", help="run a project")
-    run.add_argument("project", type=Path)
+    run = sub.add_parser("run", help="run a project"); run.add_argument("project", type=Path)
     assets = sub.add_parser("assets", help="inspect project assets")
     assets_sub = assets.add_subparsers(dest="assets_command", required=True)
-    scan = assets_sub.add_parser("scan", help="scan and index project assets")
-    scan.add_argument("project", type=Path)
+    scan = assets_sub.add_parser("scan", help="scan and index project assets"); scan.add_argument("project", type=Path)
+    agent = sub.add_parser("agent", help="AI-friendly project authoring and diagnostics")
+    agent_sub = agent.add_subparsers(dest="agent_action", required=True)
+    for action in ("inspect", "validate", "diagnose", "schema"):
+        command = agent_sub.add_parser(action); command.add_argument("project", type=Path)
+    for action in ("plan", "dry-run", "apply"):
+        command = agent_sub.add_parser(action); command.add_argument("project", type=Path); command.add_argument("operations", type=Path); command.add_argument("--no-save", action="store_true")
     args = parser.parse_args()
     if args.command == "run":
         if _is_data_project(args.project): _run_data_project(args.project)
@@ -45,6 +67,7 @@ def main() -> None:
         for asset_type, count in counts.items():
             if count: print(f"  {asset_type}: {count}")
         print(f"Index: {index_path}")
+    elif args.command == "agent": _agent_command(args)
 
 
 if __name__ == "__main__": main()

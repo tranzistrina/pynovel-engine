@@ -21,7 +21,7 @@ class AIProjectBuilder:
         return payload
     def add_component(self,component,*,requires=(),defaults=None,metadata=None):return self.document.add_component(component,requires=requires,defaults=defaults,metadata=metadata)
     def remove_component(self,component):return self.document.remove_component(component)
-    def add_system(self,system,*,kind="generic",requires=(),before=(),after=(),enabled=True,priority=0,settings=None):return self.document.add_system(system,kind=kind,requires=requires,before=before,after=after,enabled=enabled,priority=priority,settings=settings)
+    def add_system(self,system,*,kind="generic",requires=(),before=(),after=(),phases=("update",),events=(),enabled=True,priority=0,settings=None):return self.document.add_system(system,kind=kind,requires=requires,before=before,after=after,phases=phases,events=events,enabled=enabled,priority=priority,settings=settings)
     def remove_system(self,system):return self.document.remove_system(system)
     def add_resource(self,resource_id,path,resource_type,*,metadata=None):return self.document.add_resource(resource_id,path,resource_type,metadata=metadata)
     def remove_resource(self,resource_id):return self.document.remove_resource(resource_id)

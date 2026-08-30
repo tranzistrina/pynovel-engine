@@ -38,6 +38,33 @@ class AIProjectBuilder:
     def add_entity(self, entity_id: str, node_id: str, *, components: dict[str, Any] | None = None) -> dict[str, Any]:
         return self.document.add_entity(entity_id, node_id, components=components)
 
+    def set_map_property(self, key: str, value: Any) -> Any:
+        if key in {"nodes", "connections", "entities"}: raise ValueError(f"Map collection cannot be replaced: {key}")
+        payload = self.document.ensure_map(); payload[str(key)] = value; return value
+
+    def set_entity_property(self, entity_id: str, key: str, value: Any) -> Any:
+        entities = self.document.ensure_map()["entities"]
+        entity = self.document._find_by_id(entities, entity_id)
+        if entity is None: raise ValueError(f"Unknown entity: {entity_id}")
+        if key == "id": raise ValueError("Entity id cannot be changed")
+        entity[str(key)] = value; return value
+
+    def remove_node(self, node_id: str) -> dict[str, Any]:
+        payload = self.document.ensure_map(); nodes = payload["nodes"]
+        node = self.document._find_by_id(nodes, node_id)
+        if node is None: raise ValueError(f"Unknown node: {node_id}")
+        if any(c.get("source") == node_id or c.get("target") == node_id for c in payload["connections"]):
+            raise ValueError(f"Cannot remove node with connections: {node_id}")
+        if any(e.get("node_id") == node_id for e in payload["entities"]):
+            raise ValueError(f"Cannot remove node with entities: {node_id}")
+        nodes.remove(node); return node
+
+    def remove_entity(self, entity_id: str) -> dict[str, Any]:
+        entities = self.document.ensure_map()["entities"]
+        entity = self.document._find_by_id(entities, entity_id)
+        if entity is None: raise ValueError(f"Unknown entity: {entity_id}")
+        entities.remove(entity); return entity
+
     def transaction(self) -> ProjectDocument: return self.document.begin()
 
     def commit(self, *, save: bool = True) -> None:
@@ -47,27 +74,22 @@ class AIProjectBuilder:
     def rollback(self) -> None: self.document.rollback()
 
     def apply(self, operations: list[dict[str, Any]], *, save: bool = True) -> dict[str, Any]:
-        """Apply a batch atomically. Each operation is {\"command\": ..., ...args}."""
         self.document.begin()
-        try:
-            results = [self._dispatch(operation) for operation in operations]
+        try: results = [self._dispatch(operation) for operation in operations]
         except Exception:
-            self.document.rollback()
-            raise
+            self.document.rollback(); raise
         self.document.commit()
         if save: self.document.save()
         return {"applied": len(results), "results": results, "project": self.inspect()}
 
     def _dispatch(self, operation: dict[str, Any]) -> Any:
-        payload = dict(operation)
-        command = payload.pop("command", None)
+        payload = dict(operation); command = payload.pop("command", None)
         if not isinstance(command, str): raise ValueError("Operation requires a string 'command'")
         allowed: dict[str, Callable[..., Any]] = {
-            "create_project": self.create_project,
-            "create_map": self.create_map,
-            "add_node": self.add_node,
-            "add_connection": self.add_connection,
-            "add_entity": self.add_entity,
+            "create_project": self.create_project, "create_map": self.create_map,
+            "add_node": self.add_node, "add_connection": self.add_connection, "add_entity": self.add_entity,
+            "set_map_property": self.set_map_property, "set_entity_property": self.set_entity_property,
+            "remove_node": self.remove_node, "remove_entity": self.remove_entity,
         }
         handler = allowed.get(command)
         if handler is None: raise ValueError(f"Unsupported builder command: {command}")

@@ -9,6 +9,7 @@ from .ai import AIProjectAPI
 from .ai_builder import AIProjectBuilder
 from .ai_schema import BUILDER_COMMANDS, command_schema
 
+
 @dataclass(frozen=True, slots=True)
 class Diagnostic:
     severity: str
@@ -22,21 +23,21 @@ class Diagnostic:
         if self.suggestion is not None:data["suggestion"]=self.suggestion
         return data
 
+
 class AIAgentInterface:
     """Stable agent facade for inspect, plan, mutate, validate and diagnose."""
-    API_VERSION=10
+    API_VERSION=11
     def __init__(self,root: str | Path,*,runtime: Any=None):
         self.root=Path(root).resolve();self.builder=AIProjectBuilder(self.root);self.runtime=runtime;self.runtime_api=AIProjectAPI(runtime) if runtime is not None else None
     def capabilities(self)->dict[str,Any]:
-        return {"api_version":self.API_VERSION,"features":["inspect","plan","dry_run","apply","validate","diagnose","transactions","resources","asset_cache","performance_telemetry","components","systems","events"],"commands":self.command_schema()}
+        return {"api_version":self.API_VERSION,"features":["inspect","plan","dry_run","apply","validate","diagnose","transactions","resources","asset_cache","performance_telemetry","components","systems","events","system_phases"],"commands":self.command_schema()}
     def inspect(self)->dict[str,Any]:
         result=self.builder.inspect()
         if self.runtime_api is not None:result["runtime"]=self.runtime_api.describe().get("runtime",{})
         for filename,key in (("resources.json","resource_ids"),("components.json","component_names"),("systems.json","system_names")):
             path=self.root/filename
             if path.is_file():
-                try:
-                    data=self._read_json(path);result[key]=sorted(data) if isinstance(data,dict) else []
+                try:data=self._read_json(path);result[key]=sorted(data) if isinstance(data,dict) else []
                 except Exception:result[key]=[]
         if self.runtime is not None:
             assets=getattr(self.runtime,"assets",None)
@@ -62,8 +63,7 @@ class AIAgentInterface:
         plan=self.plan(operations);before=self.builder.document.inspect()
         if not plan["valid"]:return {"committed":False,"applied":0,"before":before,"preview":before,"plan":plan,"diagnostics":plan["diagnostics"]}
         self.builder.document.begin()
-        try:
-            results=[self.builder._dispatch(op) for op in operations];preview=self.builder.document.inspect()
+        try:results=[self.builder._dispatch(op) for op in operations];preview=self.builder.document.inspect()
         except Exception as exc:
             self.builder.document.rollback();return {"committed":False,"applied":0,"before":before,"preview":before,"plan":plan,"diagnostics":[self._exception_diagnostic(exc).to_dict()]}
         self.builder.document.rollback();return {"committed":False,"applied":len(results),"before":before,"preview":preview,"plan":plan,"diagnostics":[]}
@@ -118,14 +118,14 @@ class AIAgentInterface:
             for phase in raw.get("phases",["update"]):
                 if phase not in {"input","update","render"}:errors.append(Diagnostic("error","invalid_system_phase",f"Invalid system phase: {phase}",f"systems.json.{name}.phases").to_dict())
             order_edges[name]=list(raw.get("before",[]));[order_edges.setdefault(target,[]).append(name) for target in raw.get("after",[]) if target in names]
-        def visit(node,path,active,done):
+        def visit(node,active,done):
             if node in active:errors.append(Diagnostic("error","system_cycle","System dependency graph contains a cycle.","systems.json","Break the before/after cycle.").to_dict());return
             if node in done:return
             active.add(node)
-            for target in order_edges.get(node,[]):visit(target,path+[node],active,done)
+            for target in order_edges.get(node,[]):visit(target,active,done)
             active.remove(node);done.add(node)
         done=set()
-        for name in sorted(names):visit(name,[],set(),done)
+        for name in sorted(names):visit(name,set(),done)
     def _validate_resources(self,errors,warnings):
         path=self.root/"resources.json"
         if not path.is_file():return

@@ -13,7 +13,7 @@ class ProjectDocument:
         if not manifest_path.is_file(): return {"name": self.root.name or "New Project", "version": "1.0", "map_path": "map.json", "start_scene": "map", "variables": {}}
         data = json.loads(manifest_path.read_text(encoding="utf-8")); map_path = self.root / str(data.get("map_path", "map.json"))
         if map_path.is_file(): data["map"] = json.loads(map_path.read_text(encoding="utf-8"))
-        for key, filename in (("scenes", "scenes.json"), ("resources", "resources.json"), ("components", "components.json")):
+        for key, filename in (("scenes", "scenes.json"), ("resources", "resources.json"), ("components", "components.json"), ("systems", "systems.json")):
             path = self.root / filename
             if path.is_file(): data[key] = json.loads(path.read_text(encoding="utf-8"))
         return data
@@ -27,7 +27,7 @@ class ProjectDocument:
     def save(self):
         self.root.mkdir(parents=True, exist_ok=True); manifest = {key: self.data[key] for key in ("name", "version", "map_path", "start_scene", "variables") if key in self.data}
         (self.root / "project.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        for key, filename in (("map", self.data.get("map_path", "map.json")), ("scenes", "scenes.json"), ("resources", "resources.json"), ("components", "components.json")):
+        for key, filename in (("map", self.data.get("map_path", "map.json")), ("scenes", "scenes.json"), ("resources", "resources.json"), ("components", "components.json"), ("systems", "systems.json")):
             payload = self.data.get(key)
             if isinstance(payload, dict):
                 path = self.root / str(filename); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -55,6 +55,10 @@ class ProjectDocument:
         data = self.data.setdefault("components", {})
         if not isinstance(data, dict): raise ValueError("Project components must be an object")
         return data
+    def ensure_systems(self):
+        data = self.data.setdefault("systems", {})
+        if not isinstance(data, dict): raise ValueError("Project systems must be an object")
+        return data
     def add_component(self, component, *, requires=(), defaults=None, metadata=None):
         components = self.ensure_components(); key = str(component)
         if not key: raise ValueError("Component name cannot be empty")
@@ -65,6 +69,15 @@ class ProjectDocument:
     def remove_component(self, component):
         try: return self.ensure_components().pop(str(component))
         except KeyError as exc: raise ValueError(f"Unknown component: {component}") from exc
+    def add_system(self, system, *, kind="generic", requires=(), before=(), after=(), enabled=True, priority=0, settings=None):
+        systems = self.ensure_systems(); key = str(system)
+        if not key: raise ValueError("System name cannot be empty")
+        if key in systems: raise ValueError(f"Duplicate system: {key}")
+        systems[key] = {"kind": str(kind), "requires": [str(name) for name in requires], "before": [str(name) for name in before], "after": [str(name) for name in after], "enabled": bool(enabled), "priority": int(priority), "settings": deepcopy(settings or {})}
+        return systems[key]
+    def remove_system(self, system):
+        try: return self.ensure_systems().pop(str(system))
+        except KeyError as exc: raise ValueError(f"Unknown system: {system}") from exc
     def add_resource(self, resource_id, path, resource_type, *, metadata=None):
         resources = self.ensure_resources()
         if resource_id in resources: raise ValueError(f"Duplicate resource: {resource_id}")
@@ -109,5 +122,5 @@ class ProjectDocument:
         if self._find_by_id(data["entities"], entity_id): raise ValueError(f"Duplicate entity: {entity_id}")
         entity = {"id": entity_id, "node_id": node_id, "components": deepcopy(components or {})}; data["entities"].append(entity); return entity
     def inspect(self):
-        data=self.data; m,s,r,c,v=data.get("map"),data.get("scenes"),data.get("resources"),data.get("components"),data.get("variables")
-        return {"manifest": self.manifest(), "variables": len(v) if isinstance(v,dict) else 0, "scenes": len(s) if isinstance(s,dict) else 0, "resources": len(r) if isinstance(r,dict) else 0, "components": len(c) if isinstance(c,dict) else 0, "map": {"exists": isinstance(m,dict), "nodes": len(m.get("nodes",[])) if isinstance(m,dict) else 0, "connections": len(m.get("connections",[])) if isinstance(m,dict) else 0, "entities": len(m.get("entities",[])) if isinstance(m,dict) else 0}}
+        data=self.data; m,s,r,c,y,v=data.get("map"),data.get("scenes"),data.get("resources"),data.get("components"),data.get("systems"),data.get("variables")
+        return {"manifest": self.manifest(), "variables": len(v) if isinstance(v,dict) else 0, "scenes": len(s) if isinstance(s,dict) else 0, "resources": len(r) if isinstance(r,dict) else 0, "components": len(c) if isinstance(c,dict) else 0, "systems": len(y) if isinstance(y,dict) else 0, "map": {"exists": isinstance(m,dict), "nodes": len(m.get("nodes",[])) if isinstance(m,dict) else 0, "connections": len(m.get("connections",[])) if isinstance(m,dict) else 0, "entities": len(m.get("entities",[])) if isinstance(m,dict) else 0}}

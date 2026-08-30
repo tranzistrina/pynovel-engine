@@ -1,5 +1,6 @@
 """Optional extension APIs for project-specific gameplay systems."""
 
+from .audio import AudioChannel, AudioChannels
 from .commands import CommandContext, CommandRegistry
 from .events import Event, EventBus, EventSubscription
 from .notifications import Notification, NotificationLog
@@ -9,6 +10,7 @@ from .state import StateNamespace, StateRegistry
 from .system import GameSystem, SystemEvent, SystemRegistry
 
 __all__ = [
+    "AudioChannel", "AudioChannels",
     "CommandContext", "CommandRegistry",
     "Event", "EventBus", "EventSubscription",
     "Notification", "NotificationLog",

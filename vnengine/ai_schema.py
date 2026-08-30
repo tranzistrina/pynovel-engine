@@ -17,7 +17,7 @@ CommandSpec("set_variable","Set an initial project variable.",("key","value")),
 CommandSpec("create_map","Create or reset the project map.",("width","height"),("background",)),
 CommandSpec("add_component","Define a data-driven component type.",("component",),("requires","defaults","metadata")),
 CommandSpec("remove_component","Remove a data-driven component type.",("component",)),
-CommandSpec("add_system","Define a data-driven runtime system.",("system",),("kind","requires","before","after","enabled","priority","settings")),
+CommandSpec("add_system","Define a data-driven runtime system.",("system",),("kind","requires","before","after","phases","events","enabled","priority","settings")),
 CommandSpec("remove_system","Remove a system definition.",("system",)),
 CommandSpec("add_resource","Register a project resource.",("resource_id","path","resource_type"),("metadata",)),
 CommandSpec("remove_resource","Remove a project resource.",("resource_id",)),
@@ -41,4 +41,4 @@ CommandSpec("change_action","Change a numeric variable during scene execution.",
 CommandSpec("goto","Jump to a scene label.",("scene_id","target")),
 CommandSpec("label","Create a jump label inside a scene.",("scene_id","name")),)
 
-def command_schema()->dict[str,Any]:return {"api_version":9,"runtime_commands":{s.name:s.to_dict() for s in RUNTIME_COMMANDS},"builder_commands":{s.name:s.to_dict() for s in BUILDER_COMMANDS}}
+def command_schema()->dict[str,Any]:return {"api_version":10,"runtime_commands":{s.name:s.to_dict() for s in RUNTIME_COMMANDS},"builder_commands":{s.name:s.to_dict() for s in BUILDER_COMMANDS}}

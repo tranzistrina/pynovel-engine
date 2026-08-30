@@ -71,19 +71,23 @@ class AssetRuntime:
 
     def evict(self, reference: str | Path) -> bool:
         key = str(reference)
-        return self._cache.pop(key, None) is not None
+        if key not in self._cache:
+            return False
+        self._cache.pop(key)
+        return True
 
     def clear(self) -> None:
         self._cache.clear()
 
     def stats(self) -> dict[str, Any]:
+        total = self._hits + self._misses
         return {
             "cached": len(self._cache),
             "max_cache": self.max_cache,
             "hits": self._hits,
             "misses": self._misses,
             "evictions": self._evictions,
-            "hit_rate": self._hits / (self._hits + self._misses) if self._hits + self._misses else 0.0,
+            "hit_rate": self._hits / total if total else 0.0,
         }
 
     def inspect(self) -> dict[str, Any]:

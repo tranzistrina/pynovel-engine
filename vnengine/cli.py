@@ -11,6 +11,7 @@ from vnengine.frontends.pygame import PygameFrontend
 from vnengine.agent import AIAgentInterface
 from vnengine.dsl import GameDSL, DSLParseError
 from vnengine.test_runner import HeadlessTestRunner
+from vnengine.replay import ReplaySession
 
 
 def _is_data_project(project: Path) -> bool:
@@ -49,25 +50,27 @@ def _dsl_command(args: argparse.Namespace) -> None:
     source = args.source.read_text(encoding="utf-8")
     try:
         parsed = GameDSL().parse(source) if args.dsl_action == "validate" else None
-        if args.dsl_action == "validate":
-            print(json.dumps({"valid": True, "project": parsed.project, "scenes": sorted(parsed.scenes)}, ensure_ascii=False, indent=2))
-        else:
-            result = GameDSL().compile(source, args.output)
-            print(json.dumps(result, ensure_ascii=False, indent=2))
+        if args.dsl_action == "validate": print(json.dumps({"valid": True, "project": parsed.project, "scenes": sorted(parsed.scenes)}, ensure_ascii=False, indent=2))
+        else: print(json.dumps(GameDSL().compile(source, args.output), ensure_ascii=False, indent=2))
     except DSLParseError as exc:
-        print(json.dumps({"valid": False, "error": {"code": "dsl_parse_error", "line": exc.line, "message": str(exc)}}, ensure_ascii=False, indent=2))
-        raise SystemExit(2) from exc
+        print(json.dumps({"valid": False, "error": {"code": "dsl_parse_error", "line": exc.line, "message": str(exc)}}, ensure_ascii=False, indent=2)); raise SystemExit(2) from exc
 
 
 def _test_command(args: argparse.Namespace) -> int:
     runner = HeadlessTestRunner(args.project)
-    if args.spec:
-        cases = runner.load_cases(args.spec)
+    cases = runner.load_cases(args.spec) if args.spec else runner.load_cases(args.project / "tests.json") if (args.project / "tests.json").is_file() else runner.load_cases(Path(__file__).parents[1] / "tests" / "specs" / "smoke.json")
+    result = runner.run(cases); print(json.dumps(result, ensure_ascii=False, indent=2)); return 0 if result["failed"] == 0 else 1
+
+
+def _replay_command(args: argparse.Namespace) -> int:
+    with args.replay.open("r", encoding="utf-8") as handle: session = ReplaySession.from_dict(json.load(handle))
+    if args.replay_action == "inspect":
+        result = {"version": 1, "frames": len(session.frames), "duration": sum(frame.dt for frame in session.frames), "digest": session.digest(), "metadata": session.metadata}
+    elif args.replay_action == "digest":
+        result = {"digest": session.digest(), "frames": len(session.frames)}
     else:
-        cases = runner.load_cases(args.project / "tests.json") if (args.project / "tests.json").is_file() else runner.load_cases(Path(__file__).parents[1] / "tests" / "specs" / "smoke.json")
-    result = runner.run(cases)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result["failed"] == 0 else 1
+        raise SystemExit(f"Unknown replay action: {args.replay_action}")
+    print(json.dumps(result, ensure_ascii=False, indent=2)); return 0
 
 
 def main() -> None:
@@ -75,6 +78,10 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run a project"); run.add_argument("project", type=Path)
     test = sub.add_parser("test", help="run deterministic headless project tests"); test.add_argument("project", type=Path); test.add_argument("--spec", type=Path, default=None)
+    replay = sub.add_parser("replay", help="inspect deterministic replay recordings")
+    replay_sub = replay.add_subparsers(dest="replay_action", required=True)
+    for action in ("inspect", "digest"):
+        command = replay_sub.add_parser(action); command.add_argument("replay", type=Path)
     dsl = sub.add_parser("dsl", help="compile or validate declarative game files")
     dsl_sub = dsl.add_subparsers(dest="dsl_action", required=True)
     compile_cmd = dsl_sub.add_parser("compile", help="compile a .game file into project files"); compile_cmd.add_argument("source", type=Path); compile_cmd.add_argument("output", type=Path)
@@ -93,6 +100,7 @@ def main() -> None:
         if _is_data_project(args.project): _run_data_project(args.project)
         else: Game(args.project).run()
     elif args.command == "test": raise SystemExit(_test_command(args))
+    elif args.command == "replay": raise SystemExit(_replay_command(args))
     elif args.command == "dsl": _dsl_command(args)
     elif args.command == "assets" and args.assets_command == "scan":
         catalog = AssetCatalog(args.project); entries = catalog.scan(); index_path = catalog.write_index(); counts = {asset_type.value: len(catalog.by_type(asset_type)) for asset_type in AssetType}

@@ -20,28 +20,40 @@ class AIProjectBuilder:
 
     def create_project(self, name: str, *, version: str = "1.0", map_path: str = "map.json", start_scene: str = "map", variables: dict[str, Any] | None = None) -> dict[str, Any]:
         self.document.data.update({"name": str(name), "version": str(version), "map_path": str(map_path), "start_scene": str(start_scene)})
-        self.document.ensure_variables().update(dict(variables or {}))
+        if variables is not None: self.document.data["variables"] = dict(variables)
         return self.document.manifest()
 
-    def set_variable(self, key: str, value: Any) -> Any: return self.document.set_variable(key, value)
+    def set_variable(self, key: str, value: Any) -> Any:
+        self.document.data.setdefault("variables", {})[str(key)] = value
+        return value
 
     def create_map(self, *, width: float, height: float, background: str | None = None) -> dict[str, Any]:
         payload = self.document.ensure_map(); payload.update({"width": float(width), "height": float(height), "nodes": [], "connections": [], "entities": []})
         if background is not None: payload["background"] = background
         return payload
 
-    def add_scene(self, scene_id: str, *, background: str | None = None) -> dict[str, Any]: return self.document.add_scene(scene_id, background=background)
-    def remove_scene(self, scene_id: str) -> dict[str, Any]: return self.document.remove_scene(scene_id)
-    def add_scene_action(self, scene_id: str, action_type: str, **data: Any) -> dict[str, Any]: return self.document.add_scene_action(scene_id, {"type": action_type, **data})
+    def add_scene(self, scene_id: str, *, background: str | None = None) -> dict[str, Any]:
+        return self.document.add_scene(scene_id, background=background)
+
+    def remove_scene(self, scene_id: str) -> dict[str, Any]:
+        if scene_id == self.document.data.get("start_scene"): raise ValueError(f"Cannot remove start scene: {scene_id}")
+        scenes = self.document.ensure_scenes()
+        scene = scenes.pop(scene_id, None)
+        if scene is None: raise ValueError(f"Unknown scene: {scene_id}")
+        return scene
+
+    def add_scene_action(self, scene_id: str, action_type: str, **data: Any) -> dict[str, Any]:
+        return self.document.add_scene_action(scene_id, {"type": action_type, **data})
+
     def say(self, scene_id: str, speaker: str, text: str) -> dict[str, Any]: return self.add_scene_action(scene_id, "say", speaker=speaker, text=text)
     def choice(self, scene_id: str, text: str, target: str, *, condition: dict[str, Any] | None = None) -> dict[str, Any]:
-        data: dict[str, Any] = {"text": text, "target": target}
-        if condition is not None: data["condition"] = condition
-        return self.add_scene_action(scene_id, "choice", **data)
+        payload: dict[str, Any] = {"text": text, "target": target}
+        if condition is not None: payload["condition"] = condition
+        return self.add_scene_action(scene_id, "choice", **payload)
     def set_action(self, scene_id: str, variable: str, value: Any) -> dict[str, Any]: return self.add_scene_action(scene_id, "set", variable=variable, value=value)
     def change_action(self, scene_id: str, variable: str, amount: float = 1) -> dict[str, Any]: return self.add_scene_action(scene_id, "change", variable=variable, amount=amount)
     def goto(self, scene_id: str, target: str) -> dict[str, Any]: return self.add_scene_action(scene_id, "goto", target=target)
-    def label(self, scene_id: str, name: str) -> dict[str, Any]: return self.add_scene_action(scene_id, "label", label=name)
+    def label(self, scene_id: str, name: str) -> dict[str, Any]: return self.add_scene_action(scene_id, "label", name=name)
 
     def add_node(self, node_id: str, x: float, y: float, *, label: str = "", metadata: dict[str, Any] | None = None) -> dict[str, Any]: return self.document.add_node(node_id, x, y, label=label, metadata=metadata)
     def add_connection(self, source: str, target: str, *, cost: float = 1.0, blocked: bool = False, metadata: dict[str, Any] | None = None) -> dict[str, Any]: return self.document.add_connection(source, target, cost=cost, blocked=blocked, metadata=metadata)
@@ -87,16 +99,10 @@ class AIProjectBuilder:
     def _dispatch(self, operation: dict[str, Any]) -> Any:
         payload = dict(operation); command = payload.pop("command", None)
         if not isinstance(command, str): raise ValueError("Operation requires a string 'command'")
-        allowed: dict[str, Callable[..., Any]] = {
-            "create_project": self.create_project, "set_variable": self.set_variable, "create_map": self.create_map,
-            "add_scene": self.add_scene, "remove_scene": self.remove_scene, "add_scene_action": self.add_scene_action,
-            "say": self.say, "choice": self.choice, "set_action": self.set_action, "change_action": self.change_action,
-            "goto": self.goto, "label": self.label, "add_node": self.add_node, "add_connection": self.add_connection,
-            "add_entity": self.add_entity, "set_map_property": self.set_map_property, "set_entity_property": self.set_entity_property,
-            "remove_node": self.remove_node, "remove_entity": self.remove_entity,
-        }
+        allowed: dict[str, Callable[..., Any]] = {name: getattr(self, name) for name in (
+            "create_project", "set_variable", "create_map", "add_scene", "remove_scene", "add_scene_action", "say", "choice", "set_action", "change_action", "goto", "label", "add_node", "add_connection", "add_entity", "set_map_property", "set_entity_property", "remove_node", "remove_entity")}
         handler = allowed.get(command)
         if handler is None: raise ValueError(f"Unsupported builder command: {command}")
         return handler(**payload)
 
-    def inspect(self) -> dict[str, Any]: return {"root": str(self.root), **self.document.inspect()}
+    def inspect(self) -> dict[str, Any]: return {"root": str(self.root), **self.document.inspect(), "variables": dict(self.document.data.get("variables", {}))}

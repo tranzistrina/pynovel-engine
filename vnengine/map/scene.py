@@ -20,6 +20,10 @@ class MapScene:
         self.controller = MapController(self.surface, emit=self.emit)
         self.interaction = MapInteraction(self.controller, emit=self._emit_action)
 
+    @property
+    def map_world(self):
+        return self.world.world
+
     def _emit_action(self, action: Any) -> None:
         self.emit(action.name, {"target_id": action.target_id, **action.data})
 
@@ -38,7 +42,7 @@ class MapScene:
     def update(self, dt: float) -> None: self.world.update(dt)
     def render(self, target: Any) -> None:
         self.surface.draw(target)
-        for entity in self.world.entities.all():
+        for entity in self.map_world.entities.all():
             point=self.surface.map_to_screen(entity.position); self.pygame.draw.circle(target,(230,80,80),point,12)
     def serialize(self) -> dict[str, Any]: return self.world.serialize()
     def deserialize(self,payload: dict[str, Any]) -> None: self.world.deserialize(payload)

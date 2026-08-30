@@ -1,0 +1,5 @@
+{
+  "tests": [
+    {"name": "bootstrap", "frames": 2, "expected_scene": "map"}
+  ]
+}

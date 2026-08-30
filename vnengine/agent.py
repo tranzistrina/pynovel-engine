@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .ai import AIProjectAPI
 from .ai_builder import AIProjectBuilder
+from .ai_schema import command_schema
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,18 +19,27 @@ class Diagnostic:
     suggestion: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {key: value for key, value in {
-            "severity": self.severity,
-            "code": self.code,
-            "message": self.message,
-            "path": self.path,
-            "suggestion": self.suggestion,
-        }.items() if value is not None}
+        data: dict[str, Any] = {"severity": self.severity, "code": self.code, "message": self.message}
+        if self.path is not None: data["path"] = self.path
+        if self.suggestion is not None: data["suggestion"] = self.suggestion
+        return data
 
 
 class AIAgentInterface:
-    """Unified, deterministic authoring and diagnostics facade for coding agents."""
-    API_VERSION = 1
+    """Single stable API for AI agents to inspect, plan, mutate and diagnose projects."""
+
+    API_VERSION = 3
+    BUILDER_COMMANDS = {
+        "create_project": {"required": ["name"], "optional": ["version", "map_path", "start_scene"]},
+        "create_map": {"required": ["width", "height"], "optional": ["background"]},
+        "add_node": {"required": ["node_id", "x", "y"], "optional": ["label", "metadata"]},
+        "add_connection": {"required": ["source", "target"], "optional": ["cost", "blocked", "metadata"]},
+        "add_entity": {"required": ["entity_id", "node_id"], "optional": ["components"]},
+        "set_map_property": {"required": ["key", "value"], "optional": []},
+        "set_entity_property": {"required": ["entity_id", "key", "value"], "optional": []},
+        "remove_node": {"required": ["node_id"], "optional": []},
+        "remove_entity": {"required": ["entity_id"], "optional": []},
+    }
 
     def __init__(self, root: str | Path, *, runtime: Any = None):
         self.root = Path(root).resolve()
@@ -37,59 +48,82 @@ class AIAgentInterface:
         self.runtime_api = AIProjectAPI(runtime) if runtime is not None else None
 
     def capabilities(self) -> dict[str, Any]:
-        commands = [
-            "create_project", "create_map", "add_node", "add_connection", "add_entity",
-            "set_map_property", "set_entity_property", "remove_node", "remove_entity",
-        ]
-        return {"api_version": self.API_VERSION, "features": ["authoring", "batch", "inspect", "validate", "diagnostics"], "commands": commands}
+        return {"api_version": self.API_VERSION, "features": ["inspect", "plan", "dry_run", "apply", "validate", "diagnose"], "project_commands": sorted(self.BUILDER_COMMANDS), "runtime_commands": list(command_schema()["commands"])}
 
     def inspect(self) -> dict[str, Any]:
         result = self.builder.inspect()
-        if self.runtime_api is not None:
-            result["runtime"] = self.runtime_api.describe()["runtime"]
+        if self.runtime_api is not None: result["runtime"] = self.runtime_api.describe()["runtime"]
         return result
 
-    def validate(self) -> dict[str, Any]:
-        errors: list[dict[str, Any]] = []
-        warnings: list[dict[str, Any]] = []
-        manifest_path = self.root / "project.json"
-        if not manifest_path.is_file():
-            errors.append(Diagnostic("error", "missing_manifest", "Project manifest is missing.", "project.json", "Create the project before adding game content.").to_dict())
-            return {"valid": False, "errors": errors, "warnings": warnings}
+    def plan(self, operations: list[dict[str, Any]]) -> dict[str, Any]:
+        diagnostics: list[dict[str, Any]] = []
+        for index, operation in enumerate(operations):
+            location = f"operations[{index}]"
+            if not isinstance(operation, dict):
+                diagnostics.append(Diagnostic("error", "invalid_operation", "Operation must be an object.", location).to_dict()); continue
+            command = operation.get("command"); spec = self.BUILDER_COMMANDS.get(command)
+            if spec is None:
+                diagnostics.append(Diagnostic("error", "unknown_command", f"Unsupported builder command: {command}", f"{location}.command").to_dict()); continue
+            for name in spec["required"]:
+                if name not in operation: diagnostics.append(Diagnostic("error", "missing_argument", f"Missing required argument: {name}", f"{location}.{name}").to_dict())
+            allowed = set(spec["required"]) | set(spec["optional"]) | {"command"}
+            for name in operation:
+                if name not in allowed: diagnostics.append(Diagnostic("error", "unexpected_argument", f"Unexpected argument: {name}", f"{location}.{name}").to_dict())
+        return {"valid": not diagnostics, "operations": len(operations), "diagnostics": diagnostics}
+
+    def dry_run(self, operations: list[dict[str, Any]]) -> dict[str, Any]:
+        plan = self.plan(operations); before = self.builder.document.inspect()
+        if not plan["valid"]: return {"committed": False, "applied": 0, "before": before, "preview": before, "plan": plan, "diagnostics": plan["diagnostics"]}
+        self.builder.document.begin()
         try:
-            result = self.runtime_api.validate() if self.runtime_api is not None else self._validate_disk_project()
-            errors.extend(result["errors"]); warnings.extend(result["warnings"])
+            results = [self.builder._dispatch(op) for op in operations]; preview = self.builder.document.inspect()
         except Exception as exc:
-            errors.append(Diagnostic("error", "validation_exception", str(exc), None, "Inspect the project files and rerun validation.").to_dict())
+            self.builder.document.rollback(); return {"committed": False, "applied": 0, "before": before, "preview": before, "plan": plan, "diagnostics": [self._exception_diagnostic(exc).to_dict()]}
+        self.builder.document.rollback()
+        return {"committed": False, "applied": len(results), "before": before, "preview": preview, "plan": plan, "diagnostics": []}
+
+    def apply(self, operations: list[dict[str, Any]], *, save: bool = True, validate: bool = True) -> dict[str, Any]:
+        plan = self.plan(operations)
+        if not plan["valid"]: return {"committed": False, "applied": 0, "plan": plan, "diagnostics": plan["diagnostics"]}
+        try: result = self.builder.apply(operations, save=save)
+        except Exception as exc: return {"committed": False, "applied": 0, "plan": plan, "diagnostics": [self._exception_diagnostic(exc).to_dict()]}
+        validation = self.validate() if validate else {"valid": True, "errors": [], "warnings": []}
+        result.update({"committed": True, "validation": validation, "diagnostics": validation["errors"] + validation["warnings"]})
+        return result
+
+    def execute(self, operations: list[dict[str, Any]], *, dry_run: bool = False, save: bool = True, validate: bool = True) -> dict[str, Any]:
+        return self.dry_run(operations) if dry_run else self.apply(operations, save=save, validate=validate)
+
+    def validate(self) -> dict[str, Any]:
+        errors: list[dict[str, Any]] = []; warnings: list[dict[str, Any]] = []; manifest_path = self.root / "project.json"
+        if not manifest_path.is_file(): return {"valid": False, "errors": [Diagnostic("error", "missing_manifest", "Project manifest is missing.", "project.json", "Run create_project first.").to_dict()], "warnings": []}
+        try: manifest = self._read_json(manifest_path)
+        except Exception as exc: return {"valid": False, "errors": [Diagnostic("error", "invalid_manifest_json", str(exc), "project.json", "Fix the JSON syntax.").to_dict()], "warnings": []}
+        for key in ("name", "version", "map_path", "start_scene"):
+            if key not in manifest: errors.append(Diagnostic("error", "missing_manifest_field", f"Manifest field is missing: {key}", "project.json").to_dict())
+        map_path = self.root / str(manifest.get("map_path", "map.json"))
+        if not map_path.is_file(): errors.append(Diagnostic("error", "missing_map", "Configured map file is missing.", str(map_path.relative_to(self.root)), "Create a map or correct map_path.").to_dict())
+        elif self.runtime is not None:
+            start = manifest.get("start_scene")
+            if start and not self.runtime.scenes.has(start): errors.append(Diagnostic("error", "unknown_start_scene", f"Start scene is not registered: {start}", "project.json").to_dict())
         return {"valid": not errors, "errors": errors, "warnings": warnings}
 
     def diagnose(self) -> dict[str, Any]:
-        validation = self.validate()
-        return {"valid": validation["valid"], "diagnostics": validation["errors"] + validation["warnings"], "next": self._next_steps(validation)}
+        validation = self.validate(); diagnostics = validation["errors"] + validation["warnings"]
+        return {"valid": validation["valid"], "diagnostics": diagnostics, "next": self._next_steps(validation)}
 
-    def apply(self, operations: list[dict[str, Any]], *, save: bool = True, validate: bool = True) -> dict[str, Any]:
-        result = self.builder.apply(operations, save=save)
-        if validate:
-            validation = self.validate()
-            if not validation["valid"]:
-                raise ValueError(f"Project invalid after apply: {validation['errors'][0]['message']}")
-            result["validation"] = validation
-        return result
+    def command_schema(self) -> dict[str, Any]:
+        schema = command_schema(); schema["builder_commands"] = self.BUILDER_COMMANDS; return schema
 
-    def _validate_disk_project(self) -> dict[str, Any]:
-        import json
-        manifest = json.loads((self.root / "project.json").read_text(encoding="utf-8"))
-        errors: list[dict[str, Any]] = []
-        warnings: list[dict[str, Any]] = []
-        map_path = self.root / str(manifest.get("map_path", "map.json"))
-        if not map_path.is_file():
-            errors.append(Diagnostic("error", "missing_map", "Configured map file is missing.", str(map_path.relative_to(self.root)), "Create a map or correct map_path.").to_dict())
-        if not manifest.get("name"):
-            errors.append(Diagnostic("error", "missing_name", "Project name is missing.", "project.json", "Set a non-empty project name.").to_dict())
-        return {"valid": not errors, "errors": errors, "warnings": warnings}
+    @staticmethod
+    def _read_json(path: Path) -> dict[str, Any]:
+        with path.open("r", encoding="utf-8") as handle: return json.load(handle)
+
+    @staticmethod
+    def _exception_diagnostic(exc: Exception) -> Diagnostic:
+        return Diagnostic("error", type(exc).__name__.lower(), str(exc) or type(exc).__name__, suggestion="Correct the reported operation and retry.")
 
     @staticmethod
     def _next_steps(validation: dict[str, Any]) -> list[str]:
-        if not validation["valid"]:
-            return [item.get("suggestion", "Fix the reported diagnostic.") for item in validation["errors"][:3]]
-        return ["Project is structurally valid.", "Create gameplay content through batch authoring commands."]
+        if validation["errors"]: return [item.get("suggestion", "Fix the reported diagnostic.") for item in validation["errors"][:3]]
+        return ["Project is structurally valid.", "Continue using batch authoring commands."]

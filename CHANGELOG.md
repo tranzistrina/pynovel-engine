@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.40.0
+
+- Added reusable named audio channels for `music`, `ambience`, `effects`, `ui`, and `voice`, plus arbitrary project-defined channels.
+- Added independent per-channel volume and mute controls.
+- Added channel-scoped play, stop, fadeout, pause and resume operations.
+- Added serializable audio preferences for save/load without coupling saves to live mixer objects.
+- Integrated `AudioChannels` into `ExtensibleRuntime` and exposed it through the public extension API.
+- Added fake-mixer regression coverage for routing, looping, volume/mute isolation, playback lifecycle and serialization.
+- Kept audio channel semantics generic so `inhRPG` can decide which game events use voice, ambience, effects or UI audio.
+
 ## 0.39.0
 
 - Added generic save-slot display metadata to `SaveBundle`.

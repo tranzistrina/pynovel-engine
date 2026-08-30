@@ -1,13 +1,12 @@
 from __future__ import annotations
-
 import json
 from typing import Any
-
 from .game_logic import GameLogic
 from .project import ProjectLoader
 from .scene_registry import SceneRegistry, SceneContext
 from .scene_stack import SceneStack
 from .transition import TransitionManager
+from .expression import ExpressionEvaluator
 
 
 class ProjectRuntime:
@@ -17,6 +16,7 @@ class ProjectRuntime:
         self.scenes = scenes or SceneRegistry(); self.stack = SceneStack(); self.transitions = TransitionManager()
         initial_variables = getattr(self.project.manifest, "variables", {})
         self.logic = GameLogic(initial_variables if isinstance(initial_variables, dict) else {})
+        self.expression = ExpressionEvaluator(self.logic.state)
         self.viewport = viewport; self.frontend = frontend
         self.world = None; self.scene_id: str | None = None; self.scene: Any = None; self.running = False
         if not self.scenes.has("map"): self.scenes.register("map", self._create_map_scene)
@@ -45,6 +45,11 @@ class ProjectRuntime:
         if viewport is None and context.runtime.frontend is not None: viewport = context.runtime.frontend.screen.get_rect()
         if viewport is None: raise RuntimeError("Map scene requires a viewport")
         return MapScene(game_map, viewport, pygame_module=getattr(context.runtime.frontend, "_pygame", None), emit=context.runtime.emit)
+
+    def get(self, key: str, default: Any = None) -> Any: return self.logic.get(key, default)
+    def set(self, key: str, value: Any) -> Any: return self.logic.set(str(key), value)
+    def change(self, key: str, amount: Any = 1) -> Any: return self.logic.change(str(key), amount)
+    def evaluate(self, expression: Any) -> Any: return ExpressionEvaluator(self.logic.state).evaluate(expression)
 
     def start(self, *, transition: tuple[str, float] | None = None) -> None:
         self.switch_scene(self.project.manifest.start_scene, transition=transition); self.running = True
@@ -92,14 +97,14 @@ class ProjectRuntime:
 
     def save_state(self) -> dict[str, Any]:
         saver = getattr(self.scene, "serialize", None)
-        return {"scene_stack": list(self.stack.ids()), "scene": self.scene_id, "world": saver() if callable(saver) else (self.world.serialize() if self.world is not None else None), "logic": self.logic.serialize()}
+        return {"scene_stack": list(self.stack.ids()), "scene": self.scene_id, "logic": self.logic.serialize(), "world": saver() if callable(saver) else (self.world.serialize() if self.world is not None else None)}
 
     def load_state(self, state: dict[str, Any]) -> None:
         ids = state.get("scene_stack") or [state.get("scene", self.project.manifest.start_scene)]
         self.switch_scene(ids[0])
         for scene_id in ids[1:]: self.push_scene(scene_id)
+        self.logic.deserialize(state.get("logic", {})); self.expression = ExpressionEvaluator(self.logic.state)
         if state.get("world") is not None and self.world is not None: self.world.deserialize(state["world"])
-        self.logic.deserialize(state.get("logic", {}))
         refresh = getattr(self.scene, "refresh", None)
         if callable(refresh): refresh()
         self.running = True; self.emit("runtime.loaded", {"scene": self.scene_id})

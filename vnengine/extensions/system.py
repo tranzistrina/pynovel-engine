@@ -37,11 +37,17 @@ class SystemRegistry:
     def values(self) -> tuple[GameSystem, ...]:
         return tuple(self._systems.values())
 
+    def items(self) -> tuple[tuple[str, GameSystem], ...]:
+        return tuple(self._systems.items())
+
+    def names(self) -> tuple[str, ...]:
+        return tuple(self._systems)
+
     def serialize(self) -> dict[str, dict[str, Any]]:
-        return {name: system.serialize() for name, system in sorted(self._systems.items())}
+        return {name: system.serialize() for name, system in sorted(self._systems.items()) if hasattr(system, "serialize")}
 
     def deserialize(self, payload: dict[str, dict[str, Any]]) -> None:
         for name, data in payload.items():
             system = self._systems.get(name)
-            if system is not None:
+            if system is not None and hasattr(system, "deserialize"):
                 system.deserialize(data)

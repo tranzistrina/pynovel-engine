@@ -26,11 +26,11 @@ class Diagnostic:
 
 class AIAgentInterface:
     """Stable agent facade for inspect, plan, mutate, validate and diagnose."""
-    API_VERSION=11
+    API_VERSION=12
     def __init__(self,root: str | Path,*,runtime: Any=None):
         self.root=Path(root).resolve();self.builder=AIProjectBuilder(self.root);self.runtime=runtime;self.runtime_api=AIProjectAPI(runtime) if runtime is not None else None
     def capabilities(self)->dict[str,Any]:
-        return {"api_version":self.API_VERSION,"features":["inspect","plan","dry_run","apply","validate","diagnose","transactions","resources","asset_cache","performance_telemetry","components","systems","events","system_phases"],"commands":self.command_schema()}
+        return {"api_version":self.API_VERSION,"features":["inspect","plan","dry_run","apply","validate","diagnose","transactions","resources","asset_cache","performance_telemetry","components","systems","events","system_phases","runtime_state"],"commands":self.command_schema()}
     def inspect(self)->dict[str,Any]:
         result=self.builder.inspect()
         if self.runtime_api is not None:result["runtime"]=self.runtime_api.describe().get("runtime",{})
@@ -44,7 +44,12 @@ class AIAgentInterface:
             if assets is not None and callable(getattr(assets,"inspect",None)):result["asset_runtime"]=assets.inspect()
             profiler=getattr(self.runtime,"profiler",None)
             if profiler is not None and callable(getattr(profiler,"snapshot",None)):result["performance"]=profiler.snapshot()
-            if callable(getattr(self.runtime,"system_plan",None)):result["system_plan"]=self.runtime.system_plan()
+            planner=getattr(self.runtime,"system_plan",None)
+            if callable(planner):result["system_plan"]=planner()
+            saver=getattr(self.runtime,"save_state",None)
+            if callable(saver):
+                try:result["runtime_state"]=saver()
+                except Exception:result["runtime_state"]=None
         return result
     def plan(self,operations:list[dict[str,Any]])->dict[str,Any]:
         diagnostics=[];specs={spec.name:spec for spec in BUILDER_COMMANDS}
@@ -99,8 +104,7 @@ class AIAgentInterface:
         validation=self.validate();return {"valid":validation["valid"],"diagnostics":validation["errors"]+validation["warnings"],"next":self._next_steps(validation)}
     def command_schema(self):return command_schema()
     def _next_steps(self,validation):
-        if validation["valid"]:
-            return ["Project passes validation."] if not validation["warnings"] else ["Resolve warnings before release."]
+        if validation["valid"]:return ["Project passes validation."] if not validation["warnings"] else ["Resolve warnings before release."]
         return [item.get("suggestion") or item.get("message") for item in validation["errors"][:5]]
     def _exception_diagnostic(self,exc):return Diagnostic("error","operation_failed",str(exc),suggestion="Fix the reported operation and retry.")
     def _validate_map(self,path,errors,warnings):
@@ -120,10 +124,29 @@ class AIAgentInterface:
         for i,connection in enumerate(connections):
             if not isinstance(connection,dict) or str(connection.get("source")) not in node_ids or str(connection.get("target")) not in node_ids:errors.append(Diagnostic("error","invalid_connection","Connection references an unknown node.",f"map.json.connections[{i}]").to_dict())
         for i,entity in enumerate(entities):
-            if not isinstance(entity,dict) or not entity.get("id") or str(entity.get("node_id")) not in node_ids:errors.append(Diagnostic("error","invalid_entity", "Entity requires an id and valid node_id.",f"map.json.entities[{i}]").to_dict());continue
+            if not isinstance(entity,dict) or not entity.get("id") or str(entity.get("node_id")) not in node_ids:errors.append(Diagnostic("error","invalid_entity","Entity requires an id and valid node_id.",f"map.json.entities[{i}]").to_dict());continue
             eid=str(entity["id"])
             if eid in entity_ids:errors.append(Diagnostic("error","duplicate_entity",f"Duplicate entity id: {eid}",f"map.json.entities[{i}]").to_dict())
             entity_ids.add(eid)
+    def _validate_scenes(self,path,start,errors,warnings):
+        try:scenes=self._read_json(path)
+        except Exception as exc:errors.append(Diagnostic("error","invalid_scenes_json",str(exc),"scenes.json").to_dict());return
+        if not isinstance(scenes,dict):errors.append(Diagnostic("error","invalid_scenes","scenes.json root must be an object.","scenes.json").to_dict());return
+        if start and start!="map" and start not in scenes:errors.append(Diagnostic("error","unknown_start_scene",f"Start scene is not defined: {start}","project.json").to_dict())
+        for scene_id,scene in scenes.items():
+            if not isinstance(scene,dict):errors.append(Diagnostic("error","invalid_scene","Scene definition must be an object.",f"scenes.json.{scene_id}").to_dict());continue
+            actions=scene.get("actions",[])
+            if not isinstance(actions,list):errors.append(Diagnostic("error","invalid_scene_actions","Scene actions must be an array.",f"scenes.json.{scene_id}.actions").to_dict());continue
+            labels=set()
+            for index,action in enumerate(actions):
+                if not isinstance(action,dict):errors.append(Diagnostic("error","invalid_action","Action must be an object.",f"scenes.json.{scene_id}.actions[{index}]").to_dict());continue
+                kind=action.get("type")
+                if kind=="label":
+                    label=action.get("label")
+                    if label in labels:errors.append(Diagnostic("error","duplicate_label",f"Duplicate label: {label}",f"scenes.json.{scene_id}.actions[{index}]").to_dict())
+                    elif label:labels.add(str(label))
+                if kind=="say" and not action.get("text"):warnings.append(Diagnostic("warning","empty_dialogue","Dialogue action has empty text.",f"scenes.json.{scene_id}.actions[{index}]").to_dict())
+                if kind not in {"say","choice","set","change","emit","label","goto","character","if"}:errors.append(Diagnostic("error","unknown_action",f"Unknown action type: {kind}",f"scenes.json.{scene_id}.actions[{index}].type").to_dict())
     def _validate_components(self,errors,warnings):
         path=self.root/"components.json"
         if not path.is_file():return
@@ -134,7 +157,7 @@ class AIAgentInterface:
         for name,raw in data.items():
             if not isinstance(raw,dict):errors.append(Diagnostic("error","invalid_component","Component definition must be an object.",f"components.json.{name}").to_dict());continue
             for req in raw.get("requires",[]):
-                if req not in names:errors.append(Diagnostic("error","unknown_component_requirement",f"Component {name} requires unknown component: {req}",f"components.json.{name}.requires").to_dict())
+                if req not in names and req not in {"transform","state","metadata"}:errors.append(Diagnostic("error","unknown_component_requirement",f"Component {name} requires unknown component: {req}",f"components.json.{name}.requires").to_dict())
     def _validate_systems(self,errors,warnings):
         path=self.root/"systems.json"
         if not path.is_file():return
@@ -174,6 +197,6 @@ class AIAgentInterface:
             try:candidate.relative_to(self.root)
             except ValueError:errors.append(Diagnostic("error","resource_path_escape","Resource path escapes project root.",f"{location}.path").to_dict());continue
             if not candidate.is_file():warnings.append(Diagnostic("warning","missing_resource",f"Resource file is missing: {resource['path']}",f"{location}.path","Add the file or correct the path.").to_dict())
-            if not resource.get("type"):warnings.append(Diagnostic("warning","missing_resource_type","Resource has no explicit type.",f"{location}.type","Set image, audio, font, data or another resource type.").to_dict())
+            if not resource.get("type"):warnings.append(Diagnostic("warning","missing_resource_type","Resource has no explicit type.",f"{location}.type").to_dict())
     @staticmethod
     def _read_json(path:Path)->Any:return json.loads(path.read_text(encoding="utf-8"))

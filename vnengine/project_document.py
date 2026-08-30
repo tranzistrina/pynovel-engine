@@ -17,7 +17,7 @@ class ProjectDocument:
     def _load(self) -> dict[str, Any]:
         manifest_path = self.root / "project.json"
         if not manifest_path.is_file():
-            return {"name": self.root.name or "New Project", "version": "1.0", "map_path": "map.json", "start_scene": "map"}
+            return {"name": self.root.name or "New Project", "version": "1.0", "map_path": "map.json", "start_scene": "map", "variables": {}}
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
         map_path = self.root / str(data.get("map_path", "map.json"))
         if map_path.is_file(): data["map"] = json.loads(map_path.read_text(encoding="utf-8"))
@@ -37,7 +37,8 @@ class ProjectDocument:
 
     def save(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
-        manifest = {key: self.data[key] for key in ("name", "version", "map_path", "start_scene") if key in self.data}
+        manifest_keys = ("name", "version", "map_path", "start_scene", "variables")
+        manifest = {key: self.data[key] for key in manifest_keys if key in self.data}
         (self.root / "project.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         map_data = self.data.get("map")
         if isinstance(map_data, dict):
@@ -47,7 +48,17 @@ class ProjectDocument:
         if isinstance(scenes, dict):
             (self.root / "scenes.json").write_text(json.dumps(scenes, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    def manifest(self) -> dict[str, Any]: return {key: self.data.get(key) for key in ("name", "version", "map_path", "start_scene")}
+    def manifest(self) -> dict[str, Any]:
+        return {key: self.data.get(key) for key in ("name", "version", "map_path", "start_scene", "variables")}
+
+    def ensure_variables(self) -> dict[str, Any]:
+        variables = self.data.setdefault("variables", {})
+        if not isinstance(variables, dict): raise ValueError("Project variables must be an object")
+        return variables
+
+    def set_variable(self, key: str, value: Any) -> Any:
+        if not key: raise ValueError("Variable name cannot be empty")
+        self.ensure_variables()[str(key)] = deepcopy(value); return value
 
     def ensure_map(self) -> dict[str, Any]:
         map_data = self.data.setdefault("map", {})
@@ -65,8 +76,13 @@ class ProjectDocument:
         if scene_id in scenes: raise ValueError(f"Duplicate scene: {scene_id}")
         scene: dict[str, Any] = {"id": scene_id, "actions": []}
         if background is not None: scene["background"] = background
-        scenes[scene_id] = scene
-        return scene
+        scenes[scene_id] = scene; return scene
+
+    def remove_scene(self, scene_id: str) -> dict[str, Any]:
+        scenes = self.ensure_scenes()
+        if scene_id not in scenes: raise ValueError(f"Unknown scene: {scene_id}")
+        if str(self.data.get("start_scene")) == scene_id: raise ValueError("Start scene cannot be removed")
+        return scenes.pop(scene_id)
 
     def add_scene_action(self, scene_id: str, action: dict[str, Any]) -> dict[str, Any]:
         scene = self.ensure_scenes().get(scene_id)
@@ -98,5 +114,5 @@ class ProjectDocument:
         entity = {"id": entity_id, "node_id": node_id, "components": deepcopy(components or {})}; map_data["entities"].append(entity); return entity
 
     def inspect(self) -> dict[str, Any]:
-        map_data = self.data.get("map"); scenes = self.data.get("scenes")
-        return {"manifest": self.manifest(), "scenes": len(scenes) if isinstance(scenes, dict) else 0, "map": {"exists": isinstance(map_data, dict), "nodes": len(map_data.get("nodes", [])) if isinstance(map_data, dict) else 0, "connections": len(map_data.get("connections", [])) if isinstance(map_data, dict) else 0, "entities": len(map_data.get("entities", [])) if isinstance(map_data, dict) else 0}}
+        map_data = self.data.get("map"); scenes = self.data.get("scenes"); variables = self.data.get("variables")
+        return {"manifest": self.manifest(), "variables": len(variables) if isinstance(variables, dict) else 0, "scenes": len(scenes) if isinstance(scenes, dict) else 0, "map": {"exists": isinstance(map_data, dict), "nodes": len(map_data.get("nodes", [])) if isinstance(map_data, dict) else 0, "connections": len(map_data.get("connections", [])) if isinstance(map_data, dict) else 0, "entities": len(map_data.get("entities", [])) if isinstance(map_data, dict) else 0}}

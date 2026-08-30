@@ -9,10 +9,11 @@ from .project import ProjectLoader
 from .resources import ResourceRegistry
 from .scene_registry import SceneContext, SceneRegistry
 from .scene_stack import SceneStack
+from .systems import SystemRegistry
 from .transition import TransitionManager
 
 class ProjectRuntime:
-    """Runtime for data-driven games with shared state, scenes, resources and components."""
+    """Runtime for data-driven games with shared state, scenes, resources, components and systems."""
     def __init__(self, project: str, *, emit=None, scenes: SceneRegistry | None = None, viewport: Any = None, frontend: Any = None):
         self.project=ProjectLoader(project); self.emit=emit or (lambda name,data:None); self.scenes=scenes or SceneRegistry(); self.stack=SceneStack(); self.transitions=TransitionManager()
         initial_variables=getattr(self.project.manifest,"variables",{}); self.logic=GameLogic(initial_variables if isinstance(initial_variables,dict) else {}); self.expression=ExpressionEvaluator(self.logic.state)
@@ -20,7 +21,8 @@ class ProjectRuntime:
         loader=None
         if frontend is not None and getattr(frontend,"_pygame",None) is not None:
             from .pygame_assets import PygameAssetLoader; loader=PygameAssetLoader(frontend._pygame)
-        self.assets=AssetRuntime(self.resources,loader=loader); self.viewport=viewport; self.world=None; self.scene_id=None; self.scene=None; self.running=False; self.component_systems=[]
+        self.assets=AssetRuntime(self.resources,loader=loader); self.viewport=viewport; self.world=None; self.scene_id=None; self.scene=None; self.running=False
+        self.systems=SystemRegistry(); self.component_systems=[]; self._load_systems()
         if not self.scenes.has("map"): self.scenes.register("map",self._create_map_scene)
         self._register_project_scenes()
     def _register_builtin_components(self):
@@ -28,11 +30,22 @@ class ProjectRuntime:
     def _load_components(self):
         path=self.project.root/"components.json"
         if not path.is_file(): return
-        try: data=json.loads(path.read_text(encoding="utf-8"))
-        except (OSError,json.JSONDecodeError): return
-        if not isinstance(data,dict): return
-        try: self.components.register_data(data,replace=False)
-        except (ValueError,KeyError): return
+        try:data=json.loads(path.read_text(encoding="utf-8"))
+        except (OSError,json.JSONDecodeError):return
+        if not isinstance(data,dict):return
+        try:self.components.register_data(data,replace=False)
+        except (ValueError,KeyError):return
+    def _load_systems(self):
+        path=self.project.root/"systems.json"
+        if not path.is_file(): return
+        try:data=json.loads(path.read_text(encoding="utf-8"))
+        except (OSError,json.JSONDecodeError):return
+        if not isinstance(data,dict):return
+        try:self.systems.register_data(data,replace=False)
+        except (ValueError,KeyError):return
+        for name in self.systems.order():
+            runtime_system=self.systems.instantiate(name)
+            if isinstance(runtime_system,ComponentSystem): self.register_component_system(runtime_system)
     def register_component(self,name,*,factory=None,requires=(),defaults=None,metadata=None,replace=False): return self.components.register(name,factory=factory,requires=requires,defaults=defaults,metadata=metadata,replace=replace)
     def register_component_system(self,system:ComponentSystem):
         if any(item.name==system.name for item in self.component_systems): raise ValueError(f"Component system already registered: {system.name}")
@@ -40,6 +53,11 @@ class ProjectRuntime:
         if missing: raise ValueError(f"Unknown component requirements for {system.name}: {missing}")
         self.component_systems.append(system); return system
     def unregister_component_system(self,name): self.component_systems=[item for item in self.component_systems if item.name!=str(name)]
+    def register_system_definition(self,name,**kwargs):
+        spec=self.systems.register(name,**kwargs); runtime_system=self.systems.instantiate(spec.name)
+        if isinstance(runtime_system,ComponentSystem): self.register_component_system(runtime_system)
+        return spec
+    def system_plan(self): return {"order": list(self.systems.order()) if self.systems.names() else [], "enabled": [spec.name for spec in self.systems.enabled_specs()] if self.systems.names() else [], "errors": self.systems.validate_definitions() if self.systems.names() else []}
     def _load_resources(self):
         path=self.project.root/"resources.json"
         if not path.is_file(): return
@@ -107,7 +125,13 @@ class ProjectRuntime:
         if callable(update):update(value)
         entities=self.world.entities if self.world is not None and hasattr(self.world,"entities") else None
         if entities is not None:
-            for system in tuple(self.component_systems): system.run(value,entities,self.logic)
+            order=self.systems.order() if self.systems.names() else ()
+            by_name={system.name:system for system in self.component_systems}
+            for name in order:
+                system=by_name.get(name)
+                if system is not None and getattr(system,"requires",()): system.run(value,entities,self.logic)
+            for system in tuple(self.component_systems):
+                if system.name not in order: system.run(value,entities,self.logic)
     def stop(self):
         if self.scene is not None:self._call(self.scene,"exit")
         self.assets.clear(); self.running=False; self.emit("runtime.stopped",{})

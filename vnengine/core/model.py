@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
+
 
 @dataclass
 class Character:
@@ -15,22 +17,26 @@ class Character:
     expression: str = "neutral"
     rotation: float = 0.0
 
+
 @dataclass
 class ChoiceOption:
     text: str
     target: str
+
 
 @dataclass
 class Action:
     kind: str
     data: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class Story:
     actions: list[Action]
-    labels: dict[str, int]
+    labels: dict[str, int] = field(default_factory=dict)
     title: str = "PyNovel Game"
     variables: dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class SaveState:
@@ -39,6 +45,7 @@ class SaveState:
     history: list[tuple[str, str]]
     background: str | None = None
     characters: dict[str, dict[str, Any]] = field(default_factory=dict)
+
 
 @dataclass
 class GameState:
@@ -53,5 +60,6 @@ class GameState:
     characters: dict[str, dict[str, Any]] = field(default_factory=dict)
     choice_index: int = 0
     scene: str | None = None
+
     def set(self, key: str, value: Any) -> None:
         setattr(self, key, value)

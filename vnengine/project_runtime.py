@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 from typing import Any
 from .asset_runtime import AssetRuntime
+from .builtin_systems import BUILTIN_SYSTEM_FACTORIES
 from .components import ComponentRegistry, ComponentSystem
 from .event_bus import EventBus
 from .expression import ExpressionEvaluator
@@ -13,8 +14,9 @@ from .scene_stack import SceneStack
 from .systems import SystemRegistry
 from .transition import TransitionManager
 
+
 class ProjectRuntime:
-    """Runtime for data-driven games with shared state, scenes, resources, components, systems and events."""
+    """Runtime for data-driven games with scenes, ECS components, systems and events."""
     def __init__(self, project: str, *, emit=None, scenes: SceneRegistry | None = None, viewport: Any = None, frontend: Any = None):
         self.project=ProjectLoader(project); self.emit=emit or (lambda name,data:None); self.events=EventBus(); self.scenes=scenes or SceneRegistry(); self.stack=SceneStack(); self.transitions=TransitionManager()
         initial_variables=getattr(self.project.manifest,"variables",{}); self.logic=GameLogic(initial_variables if isinstance(initial_variables,dict) else {}); self.expression=ExpressionEvaluator(self.logic.state)
@@ -23,11 +25,14 @@ class ProjectRuntime:
         if frontend is not None and getattr(frontend,"_pygame",None) is not None:
             from .pygame_assets import PygameAssetLoader; loader=PygameAssetLoader(frontend._pygame)
         self.assets=AssetRuntime(self.resources,loader=loader); self.viewport=viewport; self.world=None; self.scene_id=None; self.scene=None; self.running=False
-        self.systems=SystemRegistry(); self.component_systems=[]; self._system_instances={}; self._subscriptions=[]; self._load_systems()
+        self.systems=SystemRegistry(); self.component_systems=[]; self._system_instances={}; self._subscriptions=[]; self._register_builtin_system_factories(); self._load_systems()
         if not self.scenes.has("map"): self.scenes.register("map",self._create_map_scene)
         self._register_project_scenes()
+
     def _register_builtin_components(self):
-        self.components.register("transform",defaults={"x":0.0,"y":0.0}); self.components.register("state",defaults={}); self.components.register("metadata",defaults={})
+        self.components.register("transform",defaults={"x":0.0,"y":0.0}); self.components.register("state",defaults={}); self.components.register("metadata",defaults={}); self.components.register("velocity",defaults={"x":0.0,"y":0.0})
+    def _register_builtin_system_factories(self):
+        for kind,factory in BUILTIN_SYSTEM_FACTORIES.items(): self.systems.register_factory(kind,factory)
     def _load_components(self):
         path=self.project.root/"components.json"
         if not path.is_file(): return
@@ -50,10 +55,10 @@ class ProjectRuntime:
             if name in self._system_instances: continue
             runtime_system=self.systems.instantiate(name)
             if runtime_system is not None:self._system_instances[name]=runtime_system
-            if isinstance(runtime_system,ComponentSystem):self.register_component_system(runtime_system)
+            if isinstance(runtime_system,ComponentSystem): self.register_component_system(runtime_system)
             spec=self.systems.get(name); handler=getattr(runtime_system,"on_event",None) if runtime_system is not None else None
             if callable(handler):
-                for event in spec.events:self._subscriptions.append(self.events.subscribe(event,handler))
+                for event in spec.events:self._subscriptions.append(self.events.subscribe(event,lambda data, event_name=event, handler=handler: handler(event_name,data)))
     def register_component(self,name,*,factory=None,requires=(),defaults=None,metadata=None,replace=False):return self.components.register(name,factory=factory,requires=requires,defaults=defaults,metadata=metadata,replace=replace)
     def register_component_system(self,system:ComponentSystem):
         if any(item.name==system.name for item in self.component_systems):raise ValueError(f"Component system already registered: {system.name}")
@@ -67,10 +72,10 @@ class ProjectRuntime:
         if isinstance(runtime_system,ComponentSystem):self.register_component_system(runtime_system)
         handler=getattr(runtime_system,"on_event",None) if runtime_system is not None else None
         if callable(handler):
-            for event in spec.events:self._subscriptions.append(self.events.subscribe(event,handler))
+            for event in spec.events:self._subscriptions.append(self.events.subscribe(event,lambda data,event_name=event,handler=handler: handler(event_name,data)))
         return spec
     def system_plan(self,phase=None):
-        specs=self.systems.enabled_specs(phase);return {"phase":phase,"order":[s.name for s in specs],"systems":[s.to_dict()|{"name":s.name} for s in specs]}
+        specs=self.systems.enabled_specs(phase); return {"phase":phase,"order":[s.name for s in specs],"systems":[s.to_dict()|{"name":s.name} for s in specs],"instances":[name for name in self._system_instances if name in {s.name for s in specs}]}
     def emit_event(self,event,data=None):return self.events.emit(event,data)
     def queue_event(self,event,data=None):self.events.queue(event,data)
     def subscribe(self,event,handler):return self.events.subscribe(event,handler)
@@ -130,7 +135,11 @@ class ProjectRuntime:
         self._call(self.scene,"exit");self.stack.pop();self.scene_id=self.stack.current_id;self.scene=self.stack.current;self.world=getattr(self.scene,"world",self.scene);self._call(self.scene,"resume");self.emit("scene.popped",{"scene":self.scene_id});self.events.emit("scene.popped",{"scene":self.scene_id});return self.scene
     def handle_input(self,event):
         if not self.running or self.scene is None:return False
-        self.events.emit("input.raw",event);handler=getattr(self.scene,"handle_input",None);handled=bool(handler(event)) if callable(handler) else False;self.events.emit("input.handled",{"event":event,"handled":handled});return handled
+        self.events.emit("input.raw",event);self.events.flush();handler=getattr(self.scene,"handle_input",None);handled=bool(handler(event)) if callable(handler) else False;self.events.emit("input.handled",{"event":event,"handled":handled});
+        for spec in self.systems.enabled_specs("input"):
+            system=self._system_instances.get(spec.name)
+            if system is not None and hasattr(system,"handle_input"):system.handle_input(event,self.world,self.logic)
+        return handled
     def render(self,target):
         if self.scene is None:return
         self.events.emit("phase.render",{"target":target});renderer=getattr(self.scene,"render",getattr(self.scene,"draw",None));
@@ -144,10 +153,9 @@ class ProjectRuntime:
         if callable(update):update(value)
         entities=self.world.entities if self.world is not None and hasattr(self.world,"entities") else None
         if entities is not None:
-            registered={item.name:item for item in self.component_systems}
-            for spec in self.systems.enabled_specs("update") if self.systems.names() else tuple():
-                system=registered.get(spec.name)
-                if system is not None:system.run(value,entities,self.logic)
+            for spec in self.systems.enabled_specs("update"):
+                system=self._system_instances.get(spec.name)
+                if isinstance(system,ComponentSystem):system.run(value,entities,self.logic)
         self.events.flush()
     def stop(self):
         if self.scene is not None:self._call(self.scene,"exit")

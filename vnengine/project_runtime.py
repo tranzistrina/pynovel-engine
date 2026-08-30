@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from .game_logic import GameLogic
 from .project import ProjectLoader
 from .scene_registry import SceneRegistry, SceneContext
 from .scene_stack import SceneStack
@@ -10,11 +11,11 @@ from .transition import TransitionManager
 
 
 class ProjectRuntime:
-    """Lifecycle wrapper for data-driven projects with extensible scenes."""
+    """Runtime for data-driven games with shared state, scenes and transitions."""
     def __init__(self, project: str, *, emit=None, scenes: SceneRegistry | None = None, viewport: Any = None, frontend: Any = None):
         self.project = ProjectLoader(project); self.emit = emit or (lambda name, data: None)
         self.scenes = scenes or SceneRegistry(); self.stack = SceneStack(); self.transitions = TransitionManager()
-        self.viewport = viewport; self.frontend = frontend
+        self.viewport = viewport; self.frontend = frontend; self.logic = GameLogic()
         self.world = None; self.scene_id: str | None = None; self.scene: Any = None; self.running = False
         if not self.scenes.has("map"): self.scenes.register("map", self._create_map_scene)
         self._register_project_scenes()
@@ -89,13 +90,16 @@ class ProjectRuntime:
 
     def save_state(self) -> dict[str, Any]:
         saver = getattr(self.scene, "serialize", None)
-        return {"scene_stack": list(self.stack.ids()), "scene": self.scene_id, "world": saver() if callable(saver) else (self.world.serialize() if self.world is not None else None)}
+        return {"scene_stack": list(self.stack.ids()), "scene": self.scene_id, "world": saver() if callable(saver) else (self.world.serialize() if self.world is not None else None), "logic": self.logic.serialize()}
 
     def load_state(self, state: dict[str, Any]) -> None:
         ids = state.get("scene_stack") or [state.get("scene", self.project.manifest.start_scene)]
         self.switch_scene(ids[0])
         for scene_id in ids[1:]: self.push_scene(scene_id)
         if state.get("world") is not None and self.world is not None: self.world.deserialize(state["world"])
+        self.logic.deserialize(state.get("logic", {}))
+        refresh = getattr(self.scene, "refresh", None)
+        if callable(refresh): refresh()
         self.running = True; self.emit("runtime.loaded", {"scene": self.scene_id})
 
     @staticmethod

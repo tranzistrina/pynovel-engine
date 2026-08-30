@@ -6,6 +6,7 @@ from .runtime_compat import RuntimeFacade
 from .replay import ReplayFrame, ReplayPlayer, ReplaySession
 from .replay_verifier import ReplayDifference, ReplayVerification, ReplayVerifier
 from .cli_replay import load_replay, save_replay, verify_replay
+from .components import ComponentSpec, ComponentRegistry, ComponentSystem
 
 __all__ = [
     "__version__",
@@ -24,4 +25,7 @@ __all__ = [
     "load_replay",
     "save_replay",
     "verify_replay",
+    "ComponentSpec",
+    "ComponentRegistry",
+    "ComponentSystem",
 ]

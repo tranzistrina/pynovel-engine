@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
-
 from .project_document import ProjectDocument
 
 
@@ -40,15 +38,7 @@ class AIProjectBuilder:
     def add_node(self, node_id: str, x: float, y: float, *, label: str = "", metadata: dict[str, Any] | None = None) -> dict[str, Any]: return self.document.add_node(node_id, x, y, label=label, metadata=metadata)
     def add_connection(self, source: str, target: str, *, cost: float = 1.0, blocked: bool = False, metadata: dict[str, Any] | None = None) -> dict[str, Any]: return self.document.add_connection(source, target, cost=cost, blocked=blocked, metadata=metadata)
     def add_entity(self, entity_id: str, node_id: str, *, components: dict[str, Any] | None = None) -> dict[str, Any]: return self.document.add_entity(entity_id, node_id, components=components)
-    def set_map_property(self, key: str, value: Any) -> Any:
-        if key in {"nodes", "connections", "entities"}: raise ValueError(f"Map collection cannot be replaced: {key}")
-        self.document.ensure_map()[str(key)] = value; return value
-    def set_entity_property(self, entity_id: str, key: str, value: Any) -> Any:
-        entity = self.document._find_by_id(self.document.ensure_map()["entities"], entity_id)
-        if entity is None: raise ValueError(f"Unknown entity: {entity_id}")
-        if key == "id": raise ValueError("Entity id cannot be changed")
-        entity[str(key)] = value; return value
-    def set_entity_component(self, entity_id: str, component: str, value: Any) -> Any:
+    def set_entity_component(self, entity_id: str, component: str, value: Any = None) -> Any:
         entity = self.document._find_by_id(self.document.ensure_map()["entities"], entity_id)
         if entity is None: raise ValueError(f"Unknown entity: {entity_id}")
         if not str(component): raise ValueError("Component name must not be empty")
@@ -62,6 +52,13 @@ class AIProjectBuilder:
         components = entity.get("components", {})
         if not isinstance(components, dict): raise ValueError(f"Entity components must be an object: {entity_id}")
         return components.pop(str(component), None)
+    def apply_entity_components(self, entity_id: str, components: dict[str, Any], *, replace: bool = False) -> dict[str, Any]:
+        entity = self.document._find_by_id(self.document.ensure_map()["entities"], entity_id)
+        if entity is None: raise ValueError(f"Unknown entity: {entity_id}")
+        current = entity.setdefault("components", {})
+        if not isinstance(current, dict): raise ValueError(f"Entity components must be an object: {entity_id}")
+        entity["components"] = dict(components) if replace else {**current, **components}
+        return entity["components"]
     def remove_node(self, node_id: str) -> dict[str, Any]:
         payload = self.document.ensure_map(); node = self.document._find_by_id(payload["nodes"], node_id)
         if node is None: raise ValueError(f"Unknown node: {node_id}")
@@ -88,7 +85,7 @@ class AIProjectBuilder:
     def _dispatch(self, operation: dict[str, Any]) -> Any:
         payload = dict(operation); command = payload.pop("command", None)
         if not isinstance(command, str): raise ValueError("Operation requires a string 'command'")
-        handlers = {name: getattr(self, name) for name in ("create_project", "set_variable", "create_map", "add_resource", "remove_resource", "add_scene", "remove_scene", "add_scene_action", "say", "choice", "set_action", "change_action", "goto", "label", "add_node", "add_connection", "add_entity", "set_map_property", "set_entity_property", "set_entity_component", "remove_entity_component", "remove_node", "remove_entity")}
+        handlers = {name: getattr(self, name) for name in ("create_project", "set_variable", "create_map", "add_resource", "remove_resource", "add_scene", "remove_scene", "add_scene_action", "say", "choice", "set_action", "change_action", "goto", "label", "add_node", "add_connection", "add_entity", "set_entity_component", "remove_entity_component", "apply_entity_components", "set_map_property", "set_entity_property", "remove_node", "remove_entity")}
         handler = handlers.get(command)
         if handler is None: raise ValueError(f"Unsupported builder command: {command}")
         return handler(**payload)

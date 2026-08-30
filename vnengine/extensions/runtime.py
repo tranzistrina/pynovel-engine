@@ -9,6 +9,7 @@ from vnengine.core.save_bundle import SaveBundle
 from vnengine.extensions.audio import AudioChannels
 from vnengine.extensions.commands import CommandContext, CommandRegistry
 from vnengine.extensions.events import EventSubscription
+from vnengine.extensions.input import InputMap
 from vnengine.extensions.notifications import NotificationLog
 from vnengine.extensions.scenes import SceneStack
 from vnengine.extensions.scheduler import GameScheduler
@@ -18,7 +19,7 @@ from vnengine.map.movement import MovementController
 
 
 class ExtensibleRuntime(CoreRuntime):
-    """Compatibility runtime with a single logical input/event contract."""
+    """Compatibility runtime with a single runtime lifecycle and extension contract."""
 
     ENGINE_VERSION = "0.40.0"
 
@@ -27,19 +28,60 @@ class ExtensibleRuntime(CoreRuntime):
         self.contracts = RuntimeContracts()
         self.event_bus = self.contracts.events
         self.input_map = self.contracts.input_map
-        self.systems = SystemRegistry()
-        self.commands = CommandRegistry()
-        self.scene_stack = SceneStack(self)
-        self.game_state = StateRegistry()
-        self.scheduler = GameScheduler()
-        self.rng = DeterministicRNG(0)
-        self.notifications = NotificationLog()
+        self.systems = SystemRegistry(); self.commands = CommandRegistry(); self.scene_stack = SceneStack(self)
+        self.game_state = StateRegistry(); self.scheduler = GameScheduler(); self.rng = DeterministicRNG(0); self.notifications = NotificationLog()
         self.audio = AudioChannels(asset_resolver=self.asset)
-        self._input_handlers: dict[str, list[Any]] = {}
-        self.movement = None
-        self._register_builtin_extension_actions()
-        self.emit("project.startup", {"title": story.title})
+        self._input_handlers: dict[str, list[Any]] = {}; self.movement = None
+        self._register_builtin_extension_actions(); self.emit("project.startup", {"title": story.title})
 
+    # RuntimeProtocol -------------------------------------------------
+    @property
+    def running(self) -> bool:
+        return bool(self.state.running)
+
+    def start(self, **_: Any) -> None:
+        self.new_game()
+        self.state.running = True
+
+    def handle_input(self, event: Any) -> bool:
+        return self.dispatch_input(event)
+
+    def render(self, target: Any) -> None:
+        draw = getattr(self, "draw", None)
+        if callable(draw): draw(target)
+
+    def stop(self) -> None:
+        self.state.running = False
+
+    def save_state(self) -> dict[str, Any]:
+        return {
+            "runtime": dict(self.state.variables),
+            "index": int(self.state.index),
+            "history": list(self.state.history),
+            "background": self.state.background_path,
+            "extensions": self.game_state.serialize(),
+            "scheduler": self.scheduler.serialize(),
+            "notifications": self.notifications.serialize(),
+            "audio": self.audio.serialize(),
+            "input_map": self.input_map.serialize(),
+            "systems": self.systems.serialize(),
+            "rng": self.rng.serialize(),
+        }
+
+    def load_state(self, state: dict[str, Any]) -> None:
+        self.state.variables = dict(state.get("runtime", {}))
+        self.state.index = int(state.get("index", self.state.index))
+        self.state.history = [tuple(item) for item in state.get("history", [])]
+        self.state.background_path = state.get("background")
+        self.game_state.deserialize(state.get("extensions", {}))
+        self.notifications.deserialize(state.get("notifications", {}))
+        self.audio.deserialize(state.get("audio", {}))
+        self.input_map = InputMap.deserialize(state.get("input_map", []))
+        self.contracts.input_map = self.input_map
+        self.systems.deserialize(state.get("systems", {}))
+        self.rng.deserialize(state.get("rng", {})); self.scheduler.deserialize(state.get("scheduler", {})); self.audio.restore_playback()
+
+    # Extension API --------------------------------------------------
     def attach_movement(self, definition): self.movement = MovementController(definition, self.emit); return self.movement
     def register_system(self, system): self.systems.register(system)
     def unregister_system(self, name): self.systems.unregister(name)
@@ -71,8 +113,7 @@ class ExtensibleRuntime(CoreRuntime):
         if handlers: self._input_handlers[action] = handlers
         else: self._input_handlers.pop(action, None)
 
-    def bind_input(self, action, event_type, code, modifiers=0):
-        return self.contracts.input_map.bind(action, event_type, code, modifiers)
+    def bind_input(self, action, event_type, code, modifiers=0): return self.contracts.input_map.bind(action, event_type, code, modifiers)
 
     def update(self, dt):
         super().update(dt)
@@ -82,15 +123,12 @@ class ExtensibleRuntime(CoreRuntime):
         self.scheduler.advance_seconds(max(0.0, float(dt)), lambda item: self.emit(item.event, item.data))
 
     def dispatch_input(self, event):
-        handled = False
-        if self.scene_stack.handle_input(event): handled = True
+        handled = self.scene_stack.handle_input(event)
         event_type, code, modifiers = self._normalize_input_event(event)
         for action in self.input_map.actions_for(event_type, code, modifiers):
             payload = {"action": action, "event": event}
-            self.emit("input.action", payload)
-            self.emit(f"input.action.{action}", payload)
-            for handler in tuple(self._input_handlers.get(action, ())):
-                handled = bool(handler(event, self)) or handled
+            self.emit("input.action", payload); self.emit(f"input.action.{action}", payload)
+            for handler in tuple(self._input_handlers.get(action, ())): handled = bool(handler(event, self)) or handled
         for system in self.systems.values():
             handler = getattr(system, "handle_event", None)
             if callable(handler): handled = bool(handler(event, self.game_state)) or handled
@@ -103,8 +141,7 @@ class ExtensibleRuntime(CoreRuntime):
         try:
             import pygame
             names = {pygame.KEYDOWN: "KEYDOWN", pygame.KEYUP: "KEYUP", pygame.MOUSEBUTTONDOWN: "MOUSEBUTTONDOWN", pygame.MOUSEBUTTONUP: "MOUSEBUTTONUP", pygame.MOUSEMOTION: "MOUSEMOTION"}
-        except ImportError:
-            names = {}
+        except ImportError: names = {}
         return names.get(event_type, str(event_type)), getattr(event, "key", getattr(event, "button", "")), int(getattr(event, "mod", 0))
 
     def _register_builtin_extension_actions(self): self._extension_handlers = {"call_system": self._call_system, "emit": self._emit_action, "set_state": self._set_state, "open_scene": self._open_scene, "close_scene": self._close_scene}
@@ -128,13 +165,12 @@ class ExtensibleRuntime(CoreRuntime):
 
     def save_bundle(self, path, project_version="1", metadata=None):
         bundle = SaveBundle(self.ENGINE_VERSION, project_version)
-        bundle.state = {"runtime": dict(self.state.variables), "extensions": self.game_state.serialize(), "scheduler": self.scheduler.serialize(), "notifications": self.notifications.serialize(), "audio": self.audio.serialize(), "input_map": self.input_map.serialize()}
-        bundle.metadata = dict(metadata or {}); bundle.extensions = self.systems.serialize(); bundle.rng = self.rng.serialize(); bundle.save(path)
+        bundle.state = self.save_state(); bundle.metadata = dict(metadata or {}); bundle.extensions = self.systems.serialize(); bundle.rng = self.rng.serialize(); bundle.save(path)
 
     def load_bundle(self, path, project_version="1"):
         bundle = SaveBundle.load(path)
         if bundle.project_version != project_version: raise ValueError(f"project save version mismatch: {bundle.project_version} != {project_version}")
-        self.state.variables = dict(bundle.state.get("runtime", {})); self.game_state.deserialize(bundle.state.get("extensions", {})); self.notifications.deserialize(bundle.state.get("notifications", {})); self.audio.deserialize(bundle.state.get("audio", {})); self.input_map = self.contracts.input_map = __import__('vnengine.extensions.input', fromlist=['InputMap']).InputMap.deserialize(bundle.state.get("input_map", [])); self.systems.deserialize(bundle.extensions); self.rng.deserialize(bundle.rng); self.scheduler.deserialize(bundle.state.get("scheduler", {})); self.audio.restore_playback()
+        state = dict(bundle.state); state.setdefault("systems", bundle.extensions); state.setdefault("rng", bundle.rng); self.load_state(state)
 
     def shutdown(self):
         self.emit("project.shutdown", {})

@@ -79,18 +79,51 @@ class AIAgentInterface:
         if not manifest_path.is_file():return {"valid":False,"errors":[Diagnostic("error","missing_manifest","Project manifest is missing.","project.json","Run create_project first.").to_dict()],"warnings":[]}
         try:manifest=self._read_json(manifest_path)
         except Exception as exc:return {"valid":False,"errors":[Diagnostic("error","invalid_manifest_json",str(exc),"project.json","Fix the JSON syntax.").to_dict()],"warnings":[]}
-        for key in ("name","version","map_path","start_scene"):
+        legacy="scenario" in manifest and "map_path" not in manifest
+        required=("name","version","scenario") if legacy else ("name","version","map_path","start_scene")
+        for key in required:
             if key not in manifest:errors.append(Diagnostic("error","missing_manifest_field",f"Manifest field is missing: {key}","project.json").to_dict())
-        map_path=self.root/str(manifest.get("map_path","map.json"))
-        if not map_path.is_file():errors.append(Diagnostic("error","missing_map","Configured map file is missing.",str(map_path.relative_to(self.root)),"Create a map or correct map_path.").to_dict())
-        else:self._validate_map(map_path,errors,warnings)
-        scenes_path=self.root/"scenes.json"
-        if scenes_path.is_file():self._validate_scenes(scenes_path,manifest.get("start_scene"),errors,warnings)
-        elif manifest.get("start_scene") not in (None,"map"):errors.append(Diagnostic("error","missing_scenes","Non-map start scene requires scenes.json.","project.json","Create the start scene.").to_dict())
+        if not legacy:
+            map_path=self.root/str(manifest.get("map_path","map.json"))
+            if not map_path.is_file():errors.append(Diagnostic("error","missing_map","Configured map file is missing.",str(map_path.relative_to(self.root)),"Create a map or correct map_path.").to_dict())
+            else:self._validate_map(map_path,errors,warnings)
+            scenes_path=self.root/"scenes.json"
+            if scenes_path.is_file():self._validate_scenes(scenes_path,manifest.get("start_scene"),errors,warnings)
+            elif manifest.get("start_scene") not in (None,"map"):errors.append(Diagnostic("error","missing_scenes","Non-map start scene requires scenes.json.","project.json","Create the start scene.").to_dict())
+        else:
+            scenario=self.root/str(manifest.get("scenario","game.vn"))
+            if not scenario.is_file():warnings.append(Diagnostic("warning","missing_scenario",f"Legacy scenario file is missing: {manifest.get('scenario')}","project.json","Add the scenario file or migrate the project.").to_dict())
         self._validate_resources(errors,warnings);self._validate_components(errors,warnings);self._validate_systems(errors,warnings)
         return {"valid":not errors,"errors":errors,"warnings":warnings}
-    def diagnose(self):validation=self.validate();return {"valid":validation["valid"],"diagnostics":validation["errors"]+validation["warnings"],"next":self._next_steps(validation)}
+    def diagnose(self):
+        validation=self.validate();return {"valid":validation["valid"],"diagnostics":validation["errors"]+validation["warnings"],"next":self._next_steps(validation)}
     def command_schema(self):return command_schema()
+    def _next_steps(self,validation):
+        if validation["valid"]:
+            return ["Project passes validation."] if not validation["warnings"] else ["Resolve warnings before release."]
+        return [item.get("suggestion") or item.get("message") for item in validation["errors"][:5]]
+    def _exception_diagnostic(self,exc):return Diagnostic("error","operation_failed",str(exc),suggestion="Fix the reported operation and retry.")
+    def _validate_map(self,path,errors,warnings):
+        try:data=self._read_json(path)
+        except Exception as exc:errors.append(Diagnostic("error","invalid_map_json",str(exc),str(path.relative_to(self.root))).to_dict());return
+        if not isinstance(data,dict):errors.append(Diagnostic("error","invalid_map","Map root must be an object.",str(path.relative_to(self.root))).to_dict());return
+        nodes=data.get("nodes",[]);connections=data.get("connections",[]);entities=data.get("entities",[])
+        if not isinstance(nodes,list):errors.append(Diagnostic("error","invalid_nodes","nodes must be an array.","map.json.nodes").to_dict());nodes=[]
+        if not isinstance(connections,list):errors.append(Diagnostic("error","invalid_connections","connections must be an array.","map.json.connections").to_dict());connections=[]
+        if not isinstance(entities,list):errors.append(Diagnostic("error","invalid_entities","entities must be an array.","map.json.entities").to_dict());entities=[]
+        node_ids=set();entity_ids=set()
+        for i,node in enumerate(nodes):
+            if not isinstance(node,dict) or not node.get("id"):errors.append(Diagnostic("error","invalid_node","Node requires an id.",f"map.json.nodes[{i}]").to_dict());continue
+            nid=str(node["id"])
+            if nid in node_ids:errors.append(Diagnostic("error","duplicate_node",f"Duplicate node id: {nid}",f"map.json.nodes[{i}]").to_dict())
+            node_ids.add(nid)
+        for i,connection in enumerate(connections):
+            if not isinstance(connection,dict) or str(connection.get("source")) not in node_ids or str(connection.get("target")) not in node_ids:errors.append(Diagnostic("error","invalid_connection","Connection references an unknown node.",f"map.json.connections[{i}]").to_dict())
+        for i,entity in enumerate(entities):
+            if not isinstance(entity,dict) or not entity.get("id") or str(entity.get("node_id")) not in node_ids:errors.append(Diagnostic("error","invalid_entity", "Entity requires an id and valid node_id.",f"map.json.entities[{i}]").to_dict());continue
+            eid=str(entity["id"])
+            if eid in entity_ids:errors.append(Diagnostic("error","duplicate_entity",f"Duplicate entity id: {eid}",f"map.json.entities[{i}]").to_dict())
+            entity_ids.add(eid)
     def _validate_components(self,errors,warnings):
         path=self.root/"components.json"
         if not path.is_file():return
@@ -108,7 +141,7 @@ class AIAgentInterface:
         try:data=self._read_json(path)
         except Exception as exc:errors.append(Diagnostic("error","invalid_systems_json",str(exc),"systems.json").to_dict());return
         if not isinstance(data,dict):errors.append(Diagnostic("error","invalid_systems","systems.json root must be an object.","systems.json").to_dict());return
-        names=set(data);order_edges={name:[] for name in names}
+        names=set(data);edges={name:[] for name in names}
         for name,raw in data.items():
             if not isinstance(raw,dict):errors.append(Diagnostic("error","invalid_system","System definition must be an object.",f"systems.json.{name}").to_dict());continue
             for req in raw.get("requires",[]):
@@ -117,12 +150,13 @@ class AIAgentInterface:
                 if target not in names:errors.append(Diagnostic("error","unknown_system_reference",f"System {name} references unknown system: {target}",f"systems.json.{name}").to_dict())
             for phase in raw.get("phases",["update"]):
                 if phase not in {"input","update","render"}:errors.append(Diagnostic("error","invalid_system_phase",f"Invalid system phase: {phase}",f"systems.json.{name}.phases").to_dict())
-            order_edges[name]=list(raw.get("before",[]));[order_edges.setdefault(target,[]).append(name) for target in raw.get("after",[]) if target in names]
+            edges[name]=list(raw.get("before",[]));edges[name].extend(target for target in raw.get("after",[]) if target in names)
         def visit(node,active,done):
             if node in active:errors.append(Diagnostic("error","system_cycle","System dependency graph contains a cycle.","systems.json","Break the before/after cycle.").to_dict());return
             if node in done:return
             active.add(node)
-            for target in order_edges.get(node,[]):visit(target,active,done)
+            for target in edges.get(node,[]):
+                if target in names:visit(target,active,done)
             active.remove(node);done.add(node)
         done=set()
         for name in sorted(names):visit(name,set(),done)
@@ -140,6 +174,6 @@ class AIAgentInterface:
             try:candidate.relative_to(self.root)
             except ValueError:errors.append(Diagnostic("error","resource_path_escape","Resource path escapes project root.",f"{location}.path").to_dict());continue
             if not candidate.is_file():warnings.append(Diagnostic("warning","missing_resource",f"Resource file is missing: {resource['path']}",f"{location}.path","Add the file or correct the path.").to_dict())
-            if not resource.get("type"):warnings.append(Diagnostic("warning","missing_resource_type","Resource has no explicit type.",f"{location}.type").to_dict())
+            if not resource.get("type"):warnings.append(Diagnostic("warning","missing_resource_type","Resource has no explicit type.",f"{location}.type","Set image, audio, font, data or another resource type.").to_dict())
     @staticmethod
     def _read_json(path:Path)->Any:return json.loads(path.read_text(encoding="utf-8"))

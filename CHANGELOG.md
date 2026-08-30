@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.39.0
+
+- Added generic save-slot display metadata to `SaveBundle`.
+- Supported chapter/act, play time, current campaign day, location, thumbnail path and player-facing description without coupling the engine to game-specific semantics.
+- Added optional runtime `save_bundle(..., metadata=...)` integration so external projects can populate slot metadata through the public API.
+- Preserved checksum coverage for metadata and backward compatibility with older save files that have no metadata field.
+- Added regression coverage for metadata round trips, legacy saves and integrity validation.
+
 ## 0.38.0
 
 - Added a reusable `Notification` model with title, body, severity, icon, campaign timestamp, action and unread state.

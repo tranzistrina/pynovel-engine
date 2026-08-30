@@ -45,4 +45,4 @@ BUILDER_COMMANDS = (
 )
 
 
-def command_schema() -> dict[str, Any]: return {"api_version": 3, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}
+def command_schema() -> dict[str, Any]: return {"api_version": 4, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}

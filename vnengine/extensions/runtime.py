@@ -15,7 +15,7 @@ from vnengine.extensions.input import InputMap
 from vnengine.map.movement import MovementController
 
 class ExtensibleRuntime(CoreRuntime):
-    ENGINE_VERSION="0.38.0"
+    ENGINE_VERSION="0.39.0"
     def __init__(self,story,asset_root):
         super().__init__(story,asset_root);self.event_bus=EventBus();self.systems=SystemRegistry();self.commands=CommandRegistry();self.scene_stack=SceneStack(self);self.game_state=StateRegistry();self.scheduler=GameScheduler();self.rng=DeterministicRNG(0);self.notifications=NotificationLog();self.input_map=InputMap();self._input_handlers={};self.movement=None;self._register_builtin_extension_actions();self.emit("project.startup",{"title":story.title})
     def attach_movement(self,definition):self.movement=MovementController(definition,self.emit);return self.movement
@@ -81,8 +81,9 @@ class ExtensibleRuntime(CoreRuntime):
     def _close_scene(self,action):
         current=self.scene_stack.current
         if current is not None and getattr(current,"name",None)==action.data["name"]:self.pop_scene()
-    def save_bundle(self,path,project_version="1"):
-        b=SaveBundle(self.ENGINE_VERSION,project_version);b.state={"runtime":self.state.variables,"extensions":self.game_state.serialize(),"scheduler":self.scheduler.serialize(),"notifications":self.notifications.serialize(),"input_map":self.input_map.serialize()};b.extensions={name:system.serialize() for name,system in self.systems.items() if hasattr(system,"serialize")};b.rng=self.rng.serialize();b.save(path)
+    def save_bundle(self,path,project_version="1",metadata:dict[str,Any]|None=None):
+        """Save runtime state with optional player-facing slot metadata."""
+        b=SaveBundle(self.ENGINE_VERSION,project_version);b.state={"runtime":self.state.variables,"extensions":self.game_state.serialize(),"scheduler":self.scheduler.serialize(),"notifications":self.notifications.serialize(),"input_map":self.input_map.serialize()};b.metadata=dict(metadata or {});b.extensions={name:system.serialize() for name,system in self.systems.items() if hasattr(system,"serialize")};b.rng=self.rng.serialize();b.save(path)
     def load_bundle(self,path,project_version="1"):
         b=SaveBundle.load(path)
         if b.project_version!=project_version:raise ValueError(f"project save version mismatch: {b.project_version} != {project_version}")
@@ -97,8 +98,7 @@ class ExtensibleRuntime(CoreRuntime):
         if self.state.wait_until and now<self.state.wait_until:return
         self.state.wait_until=0
         if self.state.paused_for_input:
-            if self.state.dialogue:
-                self.state.dialogue=None;self.state.paused_for_input=False
+            if self.state.dialogue:self.state.dialogue=None;self.state.paused_for_input=False
             else:return
         while self.state.index<len(self.state.story.actions) and self.state.running and not self.state.paused_for_input:
             action=self.state.story.actions[self.state.index];self.state.index+=1;self.emit("before_action",{"action":action.kind,"data":action.data})

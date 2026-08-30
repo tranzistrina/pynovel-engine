@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -10,7 +9,6 @@ class CommandSpec:
     description: str
     required: tuple[str, ...] = ()
     optional: tuple[str, ...] = ()
-
     def to_dict(self) -> dict[str, Any]: return asdict(self)
 
 
@@ -26,6 +24,8 @@ BUILDER_COMMANDS = (
     CommandSpec("create_project", "Create or replace the project manifest.", ("name",), ("version", "map_path", "start_scene", "variables")),
     CommandSpec("set_variable", "Set an initial project variable.", ("key", "value")),
     CommandSpec("create_map", "Create or reset the project map.", ("width", "height"), ("background",)),
+    CommandSpec("add_resource", "Register a project resource.", ("resource_id", "path", "resource_type"), ("metadata",)),
+    CommandSpec("remove_resource", "Remove a project resource.", ("resource_id",)),
     CommandSpec("add_node", "Add a map node.", ("node_id", "x", "y"), ("label", "metadata")),
     CommandSpec("add_connection", "Connect two existing map nodes.", ("source", "target"), ("cost", "blocked", "metadata")),
     CommandSpec("add_entity", "Add an entity to an existing map node.", ("entity_id", "node_id"), ("components",)),
@@ -45,4 +45,5 @@ BUILDER_COMMANDS = (
 )
 
 
-def command_schema() -> dict[str, Any]: return {"api_version": 4, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}
+def command_schema() -> dict[str, Any]:
+    return {"api_version": 5, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}

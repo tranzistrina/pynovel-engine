@@ -6,7 +6,7 @@ from typing import Any, Callable
 
 
 class SaveBundle:
-    """Versioned container for engine, project, extension and RNG state."""
+    """Versioned container for engine, project, extension, RNG and display metadata."""
 
     FORMAT = 1
 
@@ -16,6 +16,7 @@ class SaveBundle:
         self.state: dict[str, Any] = {}
         self.extensions: dict[str, Any] = {}
         self.rng: dict[str, Any] = {}
+        self.metadata: dict[str, Any] = {}
 
     def build(self) -> dict[str, Any]:
         payload = {
@@ -25,6 +26,7 @@ class SaveBundle:
             "state": self.state,
             "extensions": self.extensions,
             "rng": self.rng,
+            "metadata": self.metadata,
         }
         canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         payload["checksum"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -54,4 +56,5 @@ class SaveBundle:
         bundle.state = dict(data.get("state", {}))
         bundle.extensions = dict(data.get("extensions", {}))
         bundle.rng = dict(data.get("rng", {}))
+        bundle.metadata = dict(data.get("metadata", {}))
         return bundle

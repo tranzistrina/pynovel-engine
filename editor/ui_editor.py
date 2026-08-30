@@ -1,7 +1,7 @@
 from __future__ import annotations
 import copy, json
 from pathlib import Path
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtCore import Qt, QRectF, QEvent
 from PySide6.QtGui import QBrush, QPen, QColor, QFont
 from PySide6.QtWidgets import QWidget,QHBoxLayout,QVBoxLayout,QTreeWidget,QTreeWidgetItem,QGraphicsView,QGraphicsScene,QGraphicsRectItem,QGraphicsTextItem,QFormLayout,QLineEdit,QComboBox,QSpinBox,QPushButton,QLabel,QSplitter,QInputDialog
 from vnengine.ui.hierarchy import find_by_id, find_parent, iter_nodes, reparent, translate_nodes, set_z
@@ -33,7 +33,7 @@ class UIEditor(QWidget):
     def _selected_nodes(self): return [n for n in self.selection if isinstance(n,dict) and n is not self.data]
     def _set_selection(self,nodes): self.selection=list(dict.fromkeys(nodes)); self.current=self.selection[0] if self.selection else None; self.load_inspector(self.current); self.rebuild(preserve_current=True)
     def eventFilter(self,watched,event):
-        if watched is self.view.viewport() and event.type()==event.MouseButtonPress:
+        if watched is self.view.viewport() and event.type()==QEvent.Type.MouseButtonPress:
             pos=self.view.mapToScene(event.pos()); item=self.scene.itemAt(pos,self.view.transform())
             if item is not None:
                 data=item.data(0)
@@ -46,13 +46,13 @@ class UIEditor(QWidget):
                     if data is not self.data and abs(pos.x()-(x+w))<=HANDLE and abs(pos.y()-(y+h))<=HANDLE and len(self.selection)==1:self._mode='resize'; self._resize_origin=(w,h)
                     self.rebuild(preserve_current=True); return True
             elif not (event.modifiers() & Qt.ControlModifier): self.selection=[]; self.current=None; self.rebuild()
-        elif watched is self.view.viewport() and event.type()==event.MouseMove and self.selection and self._drag_start is not None:
+        elif watched is self.view.viewport() and event.type()==QEvent.Type.MouseMove and self.selection and self._drag_start is not None:
             pos=self.view.mapToScene(event.pos()); delta=pos-self._drag_start
             if self._mode=='resize' and self.current is not None:
                 self.current['width']=max(8,int(self._resize_origin[0]+delta.x())); self.current['height']=max(8,int(self._resize_origin[1]+delta.y()))
             else: translate_nodes(self.selection,int(delta.x()),int(delta.y()))
             self.rebuild(preserve_current=True); return True
-        elif watched is self.view.viewport() and event.type()==event.MouseButtonRelease:self._drag_start=None; self._drag_origin=None; self._resize_origin=None; self._mode=None; return False
+        elif watched is self.view.viewport() and event.type()==QEvent.Type.MouseButtonRelease:self._drag_start=None; self._drag_origin=None; self._resize_origin=None; self._mode=None; return False
         return super().eventFilter(watched,event)
     def _snapshot(self):return copy.deepcopy(self.data)
     def _record(self):

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -17,10 +18,11 @@ class SceneEntry:
     scene: Scene
     pause_underlying: bool = True
     input_focus: bool = True
+    paused: bool = False
 
 
 class SceneStack:
-    """Reusable non-linear scene stack for overlays and modal game scenes."""
+    """Reusable scene stack with explicit, rollback-safe lifecycle semantics."""
 
     def __init__(self, context: Any = None) -> None:
         self.context = context
@@ -34,29 +36,44 @@ class SceneStack:
         return self._entries[-1].scene if self._entries else None
 
     def push(self, scene: Scene, *, pause_underlying: bool = True, input_focus: bool = True) -> None:
-        if self.current is not None and hasattr(self.current, "pause") and pause_underlying:
-            self.current.pause()
-        self._entries.append(SceneEntry(scene, pause_underlying, input_focus))
-        scene.enter(self.context)
+        previous = self._entries[-1] if self._entries else None
+        if previous is not None and pause_underlying:
+            self._pause(previous)
+        entry = SceneEntry(scene, pause_underlying, input_focus)
+        try:
+            scene.enter(self.context)
+        except Exception:
+            if previous is not None and previous.paused:
+                self._resume(previous)
+            raise
+        self._entries.append(entry)
 
     def pop(self) -> Scene | None:
         if not self._entries:
             return None
-        entry = self._entries.pop()
+        entry = self._entries[-1]
         entry.scene.exit()
-        if self.current is not None and entry.pause_underlying and hasattr(self.current, "resume"):
-            self.current.resume()
+        self._entries.pop()
+        previous = self._entries[-1] if self._entries else None
+        if previous is not None and entry.pause_underlying:
+            self._resume(previous)
         return entry.scene
 
     def replace(self, scene: Scene, *, pause_underlying: bool = True, input_focus: bool = True) -> None:
-        if self._entries:
-            entry = self._entries.pop()
-            entry.scene.exit()
-        self._entries.append(SceneEntry(scene, pause_underlying, input_focus))
-        scene.enter(self.context)
+        previous = self._entries.pop() if self._entries else None
+        if previous is not None:
+            previous.scene.exit()
+        entry = SceneEntry(scene, pause_underlying, input_focus)
+        try:
+            scene.enter(self.context)
+        except Exception:
+            if previous is not None:
+                self._entries.append(previous)
+            raise
+        self._entries.append(entry)
 
     def update(self, dt: float) -> None:
-        for index, entry in enumerate(self._entries):
+        for index, entry in enumerate(tuple(self._entries)):
             if entry.pause_underlying and index < len(self._entries) - 1:
                 continue
             entry.scene.update(dt)
@@ -74,3 +91,22 @@ class SceneStack:
     def draw(self, surface: Any) -> None:
         for entry in self._entries:
             entry.scene.draw(surface)
+
+    @staticmethod
+    def _pause(entry: SceneEntry) -> None:
+        callback = getattr(entry.scene, "pause", None)
+        if callable(callback):
+            callback()
+        entry.paused = True
+
+    @staticmethod
+    def _resume(entry: SceneEntry) -> None:
+        if not entry.paused:
+            return
+        callback = getattr(entry.scene, "resume", None)
+        if callable(callback):
+            callback()
+        entry.paused = False
+
+    def ids(self) -> tuple[str, ...]:
+        return tuple(getattr(entry.scene, "name", "") for entry in self._entries)

@@ -4,6 +4,8 @@ from .runtime_protocol import CoreRuntimeAdapter, ExtensibleRuntimeAdapter, Runt
 from .runtime_adapter import RuntimeAdapter
 from .runtime_compat import RuntimeFacade
 from .replay import ReplayFrame, ReplayPlayer, ReplaySession
+from .replay_verifier import ReplayDifference, ReplayVerification, ReplayVerifier
+from .cli_replay import load_replay, save_replay, verify_replay
 
 __all__ = [
     "__version__",
@@ -16,4 +18,10 @@ __all__ = [
     "ReplayFrame",
     "ReplayPlayer",
     "ReplaySession",
+    "ReplayDifference",
+    "ReplayVerification",
+    "ReplayVerifier",
+    "load_replay",
+    "save_replay",
+    "verify_replay",
 ]

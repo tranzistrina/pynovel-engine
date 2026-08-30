@@ -41,4 +41,14 @@ CommandSpec("change_action","Change a numeric variable during scene execution.",
 CommandSpec("goto","Jump to a scene label.",("scene_id","target")),
 CommandSpec("label","Create a jump label inside a scene.",("scene_id","name")),)
 
-def command_schema()->dict[str,Any]:return {"api_version":10,"runtime_commands":{s.name:s.to_dict() for s in RUNTIME_COMMANDS},"builder_commands":{s.name:s.to_dict() for s in BUILDER_COMMANDS}}
+def command_schema()->dict[str,Any]:
+    return {
+        "api_version": 11,
+        "runtime_commands": {s.name:s.to_dict() for s in RUNTIME_COMMANDS},
+        "builder_commands": {s.name:s.to_dict() for s in BUILDER_COMMANDS},
+        "system_model": {
+            "phases": ["input","update","render"],
+            "builtin_kinds": ["movement","state","input"],
+            "definition_file": "systems.json",
+        },
+    }

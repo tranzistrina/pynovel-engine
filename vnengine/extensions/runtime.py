@@ -4,6 +4,7 @@ from vnengine.core.engine import Runtime as CoreRuntime
 from vnengine.core.model import Action
 from vnengine.core.rng import DeterministicRNG
 from vnengine.core.save_bundle import SaveBundle
+from vnengine.extensions.audio import AudioChannels
 from vnengine.extensions.commands import CommandContext, CommandRegistry
 from vnengine.extensions.events import EventBus
 from vnengine.extensions.notifications import Notification, NotificationLog
@@ -15,9 +16,9 @@ from vnengine.extensions.input import InputMap
 from vnengine.map.movement import MovementController
 
 class ExtensibleRuntime(CoreRuntime):
-    ENGINE_VERSION="0.39.0"
+    ENGINE_VERSION="0.40.0"
     def __init__(self,story,asset_root):
-        super().__init__(story,asset_root);self.event_bus=EventBus();self.systems=SystemRegistry();self.commands=CommandRegistry();self.scene_stack=SceneStack(self);self.game_state=StateRegistry();self.scheduler=GameScheduler();self.rng=DeterministicRNG(0);self.notifications=NotificationLog();self.input_map=InputMap();self._input_handlers={};self.movement=None;self._register_builtin_extension_actions();self.emit("project.startup",{"title":story.title})
+        super().__init__(story,asset_root);self.event_bus=EventBus();self.systems=SystemRegistry();self.commands=CommandRegistry();self.scene_stack=SceneStack(self);self.game_state=StateRegistry();self.scheduler=GameScheduler();self.rng=DeterministicRNG(0);self.notifications=NotificationLog();self.audio=AudioChannels(asset_resolver=self.asset);self.input_map=InputMap();self._input_handlers={};self.movement=None;self._register_builtin_extension_actions();self.emit("project.startup",{"title":story.title})
     def attach_movement(self,definition):self.movement=MovementController(definition,self.emit);return self.movement
     def register_system(self,system):self.systems.register(system)
     def unregister_system(self,name):self.systems.unregister(name)
@@ -81,13 +82,12 @@ class ExtensibleRuntime(CoreRuntime):
     def _close_scene(self,action):
         current=self.scene_stack.current
         if current is not None and getattr(current,"name",None)==action.data["name"]:self.pop_scene()
-    def save_bundle(self,path,project_version="1",metadata:dict[str,Any]|None=None):
-        """Save runtime state with optional player-facing slot metadata."""
-        b=SaveBundle(self.ENGINE_VERSION,project_version);b.state={"runtime":self.state.variables,"extensions":self.game_state.serialize(),"scheduler":self.scheduler.serialize(),"notifications":self.notifications.serialize(),"input_map":self.input_map.serialize()};b.metadata=dict(metadata or {});b.extensions={name:system.serialize() for name,system in self.systems.items() if hasattr(system,"serialize")};b.rng=self.rng.serialize();b.save(path)
+    def save_bundle(self,path,project_version="1",metadata=None):
+        b=SaveBundle(self.ENGINE_VERSION,project_version);b.state={"runtime":self.state.variables,"extensions":self.game_state.serialize(),"scheduler":self.scheduler.serialize(),"notifications":self.notifications.serialize(),"audio":self.audio.serialize(),"input_map":self.input_map.serialize()};b.metadata=dict(metadata or {});b.extensions={name:system.serialize() for name,system in self.systems.items() if hasattr(system,"serialize")};b.rng=self.rng.serialize();b.save(path)
     def load_bundle(self,path,project_version="1"):
         b=SaveBundle.load(path)
         if b.project_version!=project_version:raise ValueError(f"project save version mismatch: {b.project_version} != {project_version}")
-        self.state.variables=dict(b.state.get("runtime",{}));self.game_state.deserialize(b.state.get("extensions",{}));self.notifications.deserialize(b.state.get("notifications",{}));self.input_map=InputMap.deserialize(b.state.get("input_map",[]))
+        self.state.variables=dict(b.state.get("runtime",{}));self.game_state.deserialize(b.state.get("extensions",{}));self.notifications.deserialize(b.state.get("notifications",{}));self.audio.deserialize(b.state.get("audio",{}));self.input_map=InputMap.deserialize(b.state.get("input_map",[]))
         for name,payload in b.extensions.items():
             system=self.systems.get(name)
             if system is not None and hasattr(system,"deserialize"):system.deserialize(payload)

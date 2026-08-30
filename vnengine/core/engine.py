@@ -21,8 +21,7 @@ class Runtime:
             if path.suffix.lower()==".svg":
                 try:
                     import cairosvg,io
-                    png=cairosvg.svg2png(url=str(path),output_width=1200,output_height=900)
-                    self._image_cache[rel]=pygame.image.load(io.BytesIO(png)).convert_alpha()
+                    png=cairosvg.svg2png(url=str(path),output_width=1200,output_height=900);self._image_cache[rel]=pygame.image.load(io.BytesIO(png)).convert_alpha()
                 except ImportError as exc:raise pygame.error("SVG asset requires cairosvg") from exc
             else:self._image_cache[rel]=pygame.image.load(path).convert_alpha()
         return self._image_cache[rel]
@@ -121,3 +120,10 @@ class Runtime:
         for k,c in s.characters.items():
             try:s.character_surfaces[k]=self.load_image(c.image)
             except (FileNotFoundError,pygame.error):pass
+    def save_state(self) -> dict:
+        return {"index": self.state.index, "variables": dict(self.state.variables), "history": list(self.state.history), "background": self.state.background_path}
+    def load_state(self, state: dict) -> None:
+        self.state.index=int(state.get("index",0)); self.state.variables=dict(state.get("variables",{})); self.state.history=[tuple(item) for item in state.get("history",[])]; self.state.background_path=state.get("background"); self.state.dialogue=None; self.state.choice_options=[]; self.state.paused_for_input=False
+        if self.state.background_path:
+            try:self.state.background=self.load_image(self.state.background_path)
+            except (FileNotFoundError,pygame.error):self.state.background=None

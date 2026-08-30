@@ -29,10 +29,10 @@ BUILDER_COMMANDS = (
     CommandSpec("add_node", "Add a map node.", ("node_id", "x", "y"), ("label", "metadata")),
     CommandSpec("add_connection", "Connect two existing map nodes.", ("source", "target"), ("cost", "blocked", "metadata")),
     CommandSpec("add_entity", "Add an entity to an existing map node.", ("entity_id", "node_id"), ("components",)),
-    CommandSpec("set_entity_property", "Set an entity property.", ("entity_id", "key", "value")),
-    CommandSpec("set_entity_component", "Set or replace one entity component.", ("entity_id", "component", "value")),
+    CommandSpec("set_entity_component", "Set or replace one entity component.", ("entity_id", "component"), ("value",)),
     CommandSpec("remove_entity_component", "Remove one entity component.", ("entity_id", "component")),
     CommandSpec("set_map_property", "Set a map property.", ("key", "value")),
+    CommandSpec("set_entity_property", "Set an entity property.", ("entity_id", "key", "value")),
     CommandSpec("remove_node", "Remove an unused map node.", ("node_id",)),
     CommandSpec("remove_entity", "Remove a map entity.", ("entity_id",)),
     CommandSpec("add_scene", "Create a declarative scene.", ("scene_id",), ("background",)),
@@ -47,5 +47,4 @@ BUILDER_COMMANDS = (
 )
 
 
-def command_schema() -> dict[str, Any]:
-    return {"api_version": 6, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}
+def command_schema() -> dict[str, Any]: return {"api_version": 6, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}

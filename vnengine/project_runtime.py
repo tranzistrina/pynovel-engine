@@ -15,7 +15,9 @@ class ProjectRuntime:
     def __init__(self, project: str, *, emit=None, scenes: SceneRegistry | None = None, viewport: Any = None, frontend: Any = None):
         self.project = ProjectLoader(project); self.emit = emit or (lambda name, data: None)
         self.scenes = scenes or SceneRegistry(); self.stack = SceneStack(); self.transitions = TransitionManager()
-        self.viewport = viewport; self.frontend = frontend; self.logic = GameLogic()
+        initial_variables = getattr(self.project.manifest, "variables", {})
+        self.logic = GameLogic(initial_variables if isinstance(initial_variables, dict) else {})
+        self.viewport = viewport; self.frontend = frontend
         self.world = None; self.scene_id: str | None = None; self.scene: Any = None; self.running = False
         if not self.scenes.has("map"): self.scenes.register("map", self._create_map_scene)
         self._register_project_scenes()

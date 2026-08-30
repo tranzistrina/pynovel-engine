@@ -1,6 +1,9 @@
 {
   "name": "PyNovel Demo",
-  "version": 1,
+  "version": "0.40.0",
+  "map_path": "map.json",
+  "start_scene": "map",
+  "variables": {},
   "resolution": [1280, 720],
   "scenario": "game.vn",
   "default_language": "ru",

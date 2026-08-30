@@ -9,6 +9,7 @@ from vnengine.runtime import Game
 from vnengine.project_runtime import ProjectRuntime
 from vnengine.frontends.pygame import PygameFrontend
 from vnengine.agent import AIAgentInterface
+from vnengine.dsl import GameDSL, DSLParseError
 
 
 def _is_data_project(project: Path) -> bool:
@@ -43,10 +44,28 @@ def _agent_command(args: argparse.Namespace) -> None:
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
+def _dsl_command(args: argparse.Namespace) -> None:
+    source = args.source.read_text(encoding="utf-8")
+    try:
+        parsed = GameDSL().parse(source) if args.dsl_action == "validate" else None
+        if args.dsl_action == "validate":
+            print(json.dumps({"valid": True, "project": parsed.project, "scenes": sorted(parsed.scenes)}, ensure_ascii=False, indent=2))
+        else:
+            result = GameDSL().compile(source, args.output)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+    except DSLParseError as exc:
+        print(json.dumps({"valid": False, "error": {"code": "dsl_parse_error", "line": exc.line, "message": str(exc)}}, ensure_ascii=False, indent=2))
+        raise SystemExit(2) from exc
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="pynovel", description="Run and inspect a PyNovel project")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run a project"); run.add_argument("project", type=Path)
+    dsl = sub.add_parser("dsl", help="compile or validate declarative game files")
+    dsl_sub = dsl.add_subparsers(dest="dsl_action", required=True)
+    compile_cmd = dsl_sub.add_parser("compile", help="compile a .game file into project files"); compile_cmd.add_argument("source", type=Path); compile_cmd.add_argument("output", type=Path)
+    validate_cmd = dsl_sub.add_parser("validate", help="validate a .game file"); validate_cmd.add_argument("source", type=Path)
     assets = sub.add_parser("assets", help="inspect project assets")
     assets_sub = assets.add_subparsers(dest="assets_command", required=True)
     scan = assets_sub.add_parser("scan", help="scan and index project assets"); scan.add_argument("project", type=Path)
@@ -60,9 +79,9 @@ def main() -> None:
     if args.command == "run":
         if _is_data_project(args.project): _run_data_project(args.project)
         else: Game(args.project).run()
+    elif args.command == "dsl": _dsl_command(args)
     elif args.command == "assets" and args.assets_command == "scan":
-        catalog = AssetCatalog(args.project); entries = catalog.scan(); index_path = catalog.write_index()
-        counts = {asset_type.value: len(catalog.by_type(asset_type)) for asset_type in AssetType}
+        catalog = AssetCatalog(args.project); entries = catalog.scan(); index_path = catalog.write_index(); counts = {asset_type.value: len(catalog.by_type(asset_type)) for asset_type in AssetType}
         print(f"Indexed {len(entries)} assets")
         for asset_type, count in counts.items():
             if count: print(f"  {asset_type}: {count}")

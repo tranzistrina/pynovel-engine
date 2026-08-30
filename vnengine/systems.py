@@ -22,12 +22,19 @@ class SystemSpec:
 
 
 class SystemRegistry:
-    """Data-driven system definitions plus optional code factories."""
+    """Data-driven system definitions with name- and kind-based factories."""
     VALID_PHASES = {"input", "update", "render"}
 
     def __init__(self) -> None:
         self._specs: dict[str, SystemSpec] = {}
         self._factories: dict[str, Callable[[SystemSpec], Any]] = {}
+        self._kind_factories: dict[str, Callable[[SystemSpec], Any]] = {}
+
+    def register_factory(self, kind: str, factory: Callable[[SystemSpec], Any]) -> None:
+        key = str(kind).strip()
+        if not key:
+            raise ValueError("System factory kind must not be empty")
+        self._kind_factories[key] = factory
 
     def register(self, name: str, *, kind: str = "generic", requires: tuple[str, ...] = (), before: tuple[str, ...] = (), after: tuple[str, ...] = (), phases: tuple[str, ...] = ("update",), events: tuple[str, ...] = (), enabled: bool = True, priority: int = 0, settings: dict[str, Any] | None = None, factory: Callable[[SystemSpec], Any] | None = None, replace: bool = False) -> SystemSpec:
         key = str(name)
@@ -49,7 +56,7 @@ class SystemRegistry:
         if errors: raise ValueError("; ".join(errors))
         return result
 
-    def register_factory(self, name: str, factory: Callable[[SystemSpec], Any]) -> None:
+    def register_factory_for(self, name: str, factory: Callable[[SystemSpec], Any]) -> None:
         key=str(name)
         if not self.has(key): raise KeyError(f"Unknown system: {key}")
         self._factories[key]=factory
@@ -62,7 +69,7 @@ class SystemRegistry:
     def enabled_specs(self, phase: str | None = None) -> tuple[SystemSpec, ...]:
         specs=self._ordered_specs(); return tuple(spec for spec in specs if spec.enabled and (phase is None or phase in spec.phases))
     def instantiate(self,name: str)->Any:
-        spec=self.get(name); factory=self._factories.get(spec.name); return factory(spec) if factory is not None else None
+        spec=self.get(name); factory=self._factories.get(spec.name) or self._kind_factories.get(spec.kind); return factory(spec) if factory is not None else None
     def validate_definitions(self)->list[str]:
         errors=[]; names=set(self._specs)
         for name,spec in sorted(self._specs.items()):

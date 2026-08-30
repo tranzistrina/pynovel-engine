@@ -1,0 +1,27 @@
+{
+  "input": {
+    "kind": "logic",
+    "before": ["movement"],
+    "priority": 100,
+    "settings": {}
+  },
+  "movement": {
+    "kind": "logic",
+    "requires": ["transform"],
+    "before": ["dialogue"],
+    "priority": 50,
+    "settings": {"fixed": true}
+  },
+  "dialogue": {
+    "kind": "logic",
+    "after": ["movement"],
+    "priority": 10,
+    "settings": {}
+  },
+  "render": {
+    "kind": "render",
+    "after": ["dialogue"],
+    "priority": 0,
+    "settings": {}
+  }
+}

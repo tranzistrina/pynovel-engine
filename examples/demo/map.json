@@ -1,0 +1,9 @@
+{
+  "width": 1280,
+  "height": 720,
+  "nodes": [
+    {"id": "demo", "x": 640, "y": 360, "label": "Demo"}
+  ],
+  "connections": [],
+  "entities": []
+}

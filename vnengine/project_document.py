@@ -69,11 +69,11 @@ class ProjectDocument:
     def remove_component(self, component):
         try: return self.ensure_components().pop(str(component))
         except KeyError as exc: raise ValueError(f"Unknown component: {component}") from exc
-    def add_system(self, system, *, kind="generic", requires=(), before=(), after=(), enabled=True, priority=0, settings=None):
+    def add_system(self, system, *, kind="generic", requires=(), before=(), after=(), phases=("update",), events=(), enabled=True, priority=0, settings=None):
         systems = self.ensure_systems(); key = str(system)
         if not key: raise ValueError("System name cannot be empty")
         if key in systems: raise ValueError(f"Duplicate system: {key}")
-        systems[key] = {"kind": str(kind), "requires": [str(name) for name in requires], "before": [str(name) for name in before], "after": [str(name) for name in after], "enabled": bool(enabled), "priority": int(priority), "settings": deepcopy(settings or {})}
+        systems[key] = {"kind": str(kind), "requires": [str(name) for name in requires], "before": [str(name) for name in before], "after": [str(name) for name in after], "phases": [str(name) for name in phases], "events": [str(name) for name in events], "enabled": bool(enabled), "priority": int(priority), "settings": deepcopy(settings or {})}
         return systems[key]
     def remove_system(self, system):
         try: return self.ensure_systems().pop(str(system))

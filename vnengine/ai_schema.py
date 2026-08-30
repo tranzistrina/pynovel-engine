@@ -31,6 +31,7 @@ BUILDER_COMMANDS = (
     CommandSpec("add_entity", "Add an entity to an existing map node.", ("entity_id", "node_id"), ("components",)),
     CommandSpec("set_entity_component", "Set or replace one entity component.", ("entity_id", "component"), ("value",)),
     CommandSpec("remove_entity_component", "Remove one entity component.", ("entity_id", "component")),
+    CommandSpec("apply_entity_components", "Apply many entity components atomically.", ("entity_id", "components"), ("replace",)),
     CommandSpec("set_map_property", "Set a map property.", ("key", "value")),
     CommandSpec("set_entity_property", "Set an entity property.", ("entity_id", "key", "value")),
     CommandSpec("remove_node", "Remove an unused map node.", ("node_id",)),
@@ -47,4 +48,4 @@ BUILDER_COMMANDS = (
 )
 
 
-def command_schema() -> dict[str, Any]: return {"api_version": 6, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}
+def command_schema() -> dict[str, Any]: return {"api_version": 7, "runtime_commands": {s.name: s.to_dict() for s in RUNTIME_COMMANDS}, "builder_commands": {s.name: s.to_dict() for s in BUILDER_COMMANDS}}

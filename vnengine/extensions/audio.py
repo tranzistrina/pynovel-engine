@@ -38,14 +38,15 @@ class AudioChannels:
         channel = self.channel(name); channel.muted = bool(muted); self._apply_volume(name)
 
     def play(self, name: str, path: str, *, loop: bool = False) -> bool:
-        channel = self.channel(name); mixer = self._ensure_mixer()
+        channel = self.channel(name)
         try:
+            mixer = self._ensure_mixer()
             sound = mixer.Sound(str(self._asset_resolver(path)))
             pygame_channel = self._pygame_channels.get(name)
             if pygame_channel is None:
                 pygame_channel = mixer.Channel(len(self._pygame_channels)); self._pygame_channels[name] = pygame_channel
             pygame_channel.set_volume(0.0 if channel.muted else channel.volume); pygame_channel.play(sound, loops=-1 if loop else 0)
-        except (OSError, RuntimeError, ValueError): return False
+        except (ImportError, OSError, RuntimeError, ValueError): return False
         channel.current = str(path); channel.loop = bool(loop); channel.paused = False; return True
 
     def stop(self, name: str, fade_ms: int = 0) -> None:
